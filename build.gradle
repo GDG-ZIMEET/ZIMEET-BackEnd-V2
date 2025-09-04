@@ -2,7 +2,6 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.3.1'
 	id 'io.spring.dependency-management' version '1.1.7'
-	id "org.flywaydb.flyway" version "9.16.0"
 }
 
 group = 'com.example'
@@ -45,15 +44,10 @@ dependencies {
 	implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 
-
 	// websocket
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	implementation 'org.webjars:sockjs-client:1.5.1'
 	implementation 'org.webjars:stomp-websocket:2.3.4'
-
-	// flyway
-	implementation 'org.flywaydb:flyway-core'
-	implementation "org.flywaydb:flyway-mysql"
 
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-hibernate5-jakarta:2.17.1'
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'

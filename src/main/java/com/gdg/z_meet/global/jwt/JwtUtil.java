@@ -44,8 +44,7 @@ public class JwtUtil {
 
     @PostConstruct
     protected void init() {
-        byte[] bytes = Base64.getDecoder().decode(secretKey);
-        key = Keys.hmacShaKeyFor(bytes);
+        key = Keys.hmacShaKeyFor(secretKey.getBytes());
         jwtParser = Jwts.parserBuilder().setSigningKey(key).build();
     }
 

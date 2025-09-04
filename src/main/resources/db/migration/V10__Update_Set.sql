@@ -1,2 +1,0 @@
-ALTER TABLE club
-    MODIFY COLUMN place ENUM('S_LEFT', 'S_RIGHT', 'A', 'F') NOT NULL;
