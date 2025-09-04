@@ -57,4 +57,4 @@ kakao:
     approve-url: https://open-api.kakaopay.com/online/v1/payment/approve
 
 firebase:
-  admin-sdk: ${FIREBASE_ADMIN_SDK_JSON}
+  admin-sdk: ${FIREBASE_ADMIN_SDK_PATH}

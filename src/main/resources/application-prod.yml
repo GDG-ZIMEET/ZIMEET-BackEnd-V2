@@ -13,7 +13,7 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
-    show_sql: false             # prod 환경에서는 SQL 출력 비활성화
+    show_sql: false
   data:
     redis:
       host: redis1
@@ -29,6 +29,3 @@ spring:
   web:
     resources:
       static-locations: classpath:/static/, file:/static/
-
-firebase:
-  admin-sdk: firebase/zi-meet-firebase-adminsdk-fbsvc-f026a2abf0.json
