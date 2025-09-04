@@ -15,14 +15,13 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: update # 스키마 자동 업데이트
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: true
     show_sql: true
-  flyway:
-    enabled: false     # dev 환경에서는 flyway 사용 x
+
   data:
     redis:
       host: localhost
@@ -36,10 +35,6 @@ spring:
     type: caffeine
     caffeine:
       spec: maximumSize=500,expireAfterAccess=3600s
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
 
 springdoc:
   use-fqn: true
@@ -62,4 +57,4 @@ kakao:
     approve-url: https://open-api.kakaopay.com/online/v1/payment/approve
 
 firebase:
-  admin-sdk: firebase/zi-meet-firebase-adminsdk-fbsvc-f026a2abf0.json
+  admin-sdk: ${FIREBASE_ADMIN_SDK_JSON}
