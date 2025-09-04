@@ -1,0 +1,70 @@
+# [사용법]
+# docker-compose -f docker-compose.dev.yml up -d
+# docker-compose -f docker-compose.dev.yml down
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=${DEFAULT_SCHEMA}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  mongodb:
+    image: mongo:6
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  app:
+    build: .
+    container_name: backend
+    environment:
+      # 기본 Spring Boot 설정
+      - SPRING_PROFILES_ACTIVE=dev
+      - SERVER_PORT=8080
+      - TZ=Asia/Seoul
+      - JAVA_OPTS=-Duser.timezone=Asia/Seoul
+      # 데이터베이스 설정
+      - DEFAULT_SCHEMA=${DEFAULT_SCHEMA}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      # Redis, MongoDB 설정
+      - REDIS_HOST=redis
+      - MONGODB_HOST=mongodb
+      - MONGODB_DATABASE=zimeet
+      # JWT 설정
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      # Firebase 설정
+      - FIREBASE_ADMIN_SDK_PATH=${FIREBASE_ADMIN_SDK_PATH}
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mongodb:
+        condition: service_started
+
+volumes:
+  mysql_data:
+  mongodb_data:
