@@ -34,6 +34,12 @@ replay_pid*
 # Firebase service account keys
 src/main/resources/firebase/*.json
 
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
 # macOS
 .DS_Store
 **/.DS_Store
