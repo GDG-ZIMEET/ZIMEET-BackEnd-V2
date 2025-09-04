@@ -1,12 +1,3 @@
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health      # Actuator에서 health 엔드포인트를 활성화
-  endpoint:
-    health:
-      show-details: always
-
 spring:
   datasource:
     url: jdbc:mysql://${DEFAULT_URL}:3306/${DEFAULT_SCHEMA}?serverTimezone=UTC
@@ -36,14 +27,14 @@ spring:
     caffeine:
       spec: maximumSize=500,expireAfterAccess=3600s
 
-springdoc:
-  use-fqn: true
-  api-docs:
-    enabled: true
-  swagger-ui:
-    enabled: true
-  cache:
-    disabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
 
 jwt:
     secret: ${JWT_SECRET_KEY}
