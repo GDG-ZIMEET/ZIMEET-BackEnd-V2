@@ -1,0 +1,105 @@
+services:
+  redis:
+    container_name: redis1
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - gdg_network
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb1
+    ports:
+      - "27018:27017"
+    networks:
+      - gdg_network
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  backend-blue:
+    container_name: backend-blue
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    expose:
+      - "8080"
+    environment:
+      - MYSQL_USER=${PROD_DB_USERNAME}
+      - MYSQL_PASSWORD=${PROD_DB_PASSWORD}
+      - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC
+    networks:
+      - gdg_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  backend-green:
+    container_name: backend-green
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    expose:
+      - "8080"
+    environment:
+      - MYSQL_USER=${PROD_DB_USERNAME}
+      - MYSQL_PASSWORD=${PROD_DB_PASSWORD}
+      - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC
+    networks:
+      - gdg_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    ports:
+      - "90:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/backend_upstream.conf:/etc/nginx/backend_upstream.conf:ro
+      - /etc/letsencrypt/live/api.zimeet.store:/etc/letsencrypt/live/api.zimeet.store:ro
+      - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
+      - /etc/letsencrypt/privkey.pem:/etc/letsencrypt/privkey.pem:ro
+    environment:
+      - TZ=Asia/Seoul
+    networks:
+      - gdg_network
+    restart: always
+    healthcheck:
+      test: [ "CMD", "curl", "-kf", "http://localhost" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  gdg_network:
+    driver: bridge
+
+volumes:
+  mongodb_data:

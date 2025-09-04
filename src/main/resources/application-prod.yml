@@ -1,0 +1,48 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: jdbc:mysql://${PROD_DB_ENDPOINT}:3306/gdg?serverTimezone=UTC
+    username: ${PROD_DB_USERNAME}
+    password: ${PROD_DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate      # prod 환경에서는 스키마 자동 변경을 막아야
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    show_sql: false        # prod 환경에서는 SQL 출력 비활성화
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    table: flyway_schema_history
+    baseline-on-migrate: false
+    ignoreMigrationPatterns: validate
+    validate-on-migrate: false
+  data:
+    redis:
+      host: redis1
+      port: 6379
+      repositories:
+        enabled: false
+    mongodb:
+      host: mongodb1
+      port: 27017
+      database: zimeet
+  mvc:
+    static-path-pattern: /static/**
+  web:
+    resources:
+      static-locations: classpath:/static/, file:/static/
+
+firebase:
+  admin-sdk: firebase/zi-meet-firebase-adminsdk-fbsvc-f026a2abf0.json
+
+#kakao:
+#  pay:
+#    secret-key: ${KAKAO_PAY_SECRET_KEY}     # 실 결제 시크릿 키
+#    cid:          # 실제 가맹점 ID 받아야
+#    ready-url: https://open-api.kakaopay.com/online/v1/payment/ready
+#    approve-url: https://open-api.kakaopay.com/online/v1/payment/approve
