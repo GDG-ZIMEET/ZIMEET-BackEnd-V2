@@ -1,0 +1,19 @@
+spring:
+  config:
+    activate:
+      on-profile: worker
+  
+  # RabbitMQ 설정
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: admin
+    password: admin123
+    virtual-host: /
+
+logging:
+  level:
+    com.gdg.z_meet: INFO
+    org.springframework.amqp: DEBUG
+  pattern:
+    console: "[WORKER] %d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

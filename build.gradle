@@ -57,6 +57,9 @@ dependencies {
 	implementation 'com.google.firebase:firebase-admin:9.2.0'           // Google Firebase Admin
 	implementation 'com.fasterxml.jackson.core:jackson-core:2.16.1'
 
+	// RabbitMQ
+	implementation 'org.springframework.boot:spring-boot-starter-amqp'
+
 	// openFeign
 	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign:4.0.3'
 	implementation 'org.springframework.cloud:spring-cloud-starter-loadbalancer'

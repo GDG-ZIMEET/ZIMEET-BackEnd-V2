@@ -74,6 +74,51 @@ services:
       retries: 5
       start_period: 60s
 
+  # FCM Worker WAS (상시 동작)
+  backend-worker-1:
+    container_name: backend-worker-1
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=worker
+      - MYSQL_USER=${PROD_DB_USERNAME}
+      - MYSQL_PASSWORD=${PROD_DB_PASSWORD}
+      - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC
+    networks:
+      - gdg_network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  backend-worker-2:
+    container_name: backend-worker-2
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=worker
+      - MYSQL_USER=${PROD_DB_USERNAME}
+      - MYSQL_PASSWORD=${PROD_DB_PASSWORD}
+      - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC
+    networks:
+      - gdg_network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   nginx:
     container_name: nginx
     image: nginx:latest
@@ -99,7 +144,7 @@ services:
 
 networks:
   gdg_network:
-    driver: bridge
+    external: true
 
 volumes:
   mongodb_data:
