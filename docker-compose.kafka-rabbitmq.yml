@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # RabbitMQ
   rabbitmq:
@@ -7,10 +5,10 @@ services:
     container_name: rabbitmq
     ports:
       - "5672:5672"      # AMQP port
-      # - "15672:15672"  # Management UI (운영환경에서는 주석처리 권장)
+      - "15672:15672"   # Management UI
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
       RABBITMQ_DEFAULT_VHOST: /
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq

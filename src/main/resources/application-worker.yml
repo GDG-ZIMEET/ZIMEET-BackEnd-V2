@@ -2,14 +2,6 @@ spring:
   config:
     activate:
       on-profile: worker
-  
-  # RabbitMQ 설정
-  rabbitmq:
-    host: rabbitmq
-    port: 5672
-    username: admin
-    password: admin123
-    virtual-host: /
 
 logging:
   level:

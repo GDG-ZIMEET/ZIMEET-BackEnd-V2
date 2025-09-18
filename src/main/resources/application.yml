@@ -49,3 +49,19 @@ kakao:
 
 firebase:
   admin-sdk: ${FIREBASE_ADMIN_SDK_PATH}
+
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASSWORD:1234}
+    virtual-host: /
+    listener:
+      simple:
+        prefetch: 10
+        concurrency: 3
+        max-concurrency: 10
+        retry:
+          enabled: true
+          initial-interval: 2000
+          max-attempts: 5
