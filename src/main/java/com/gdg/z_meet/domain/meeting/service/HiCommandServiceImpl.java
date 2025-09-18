@@ -1,6 +1,6 @@
 package com.gdg.z_meet.domain.meeting.service;
 
-import com.gdg.z_meet.domain.fcm.service.meeting.FcmMeetingMessageServiceImpl;
+import com.gdg.z_meet.domain.fcm.service.meeting.FcmMeetingMessageService;
 import com.gdg.z_meet.domain.meeting.dto.MeetingRequestDTO;
 import com.gdg.z_meet.domain.meeting.entity.Hi;
 import com.gdg.z_meet.domain.meeting.entity.Team;
@@ -29,7 +29,7 @@ public class HiCommandServiceImpl implements HiCommandService {
     private final HiRepository hiRepository;
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
-    private final FcmMeetingMessageServiceImpl fcmMeetingMessageServiceImpl;
+    private final FcmMeetingMessageService fcmMeetingMessageService;
 
     // 중복 제거용 유틸 메서드 - Team/User 공통 처리
     public <T> Map<String, T> assignEntities(List<T> entities, Long fromId, Function<T, Long> idExtractor) {
@@ -104,7 +104,7 @@ public class HiCommandServiceImpl implements HiCommandService {
 
     private void sendFcmGetHiTeam (MeetingRequestDTO.HiDto hiDto) {
         Long targetTeamId = hiDto.getToId();
-        fcmMeetingMessageServiceImpl.messagingHiToTeam(targetTeamId);
+        fcmMeetingMessageService.messagingHiToTeam(targetTeamId);
     }
 
     @Override
@@ -146,7 +146,7 @@ public class HiCommandServiceImpl implements HiCommandService {
 
     private void sendFcmGetHiUser(MeetingRequestDTO.HiDto hiDto) {
         Long targetUserId = hiDto.getToId();
-        fcmMeetingMessageServiceImpl.messagingHiToUser(targetUserId);
+        fcmMeetingMessageService.messagingHiToUser(targetUserId);
     }
 
     @Override

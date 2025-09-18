@@ -1,6 +1,6 @@
 package com.gdg.z_meet.domain.meeting.service;
 
-import com.gdg.z_meet.domain.fcm.service.profile.FcmProfileMessageServiceImpl;
+import com.gdg.z_meet.domain.fcm.service.profile.FcmProfileMessageService;
 import com.gdg.z_meet.domain.meeting.converter.MeetingConverter;
 import com.gdg.z_meet.domain.meeting.dto.MeetingResponseDTO;
 import com.gdg.z_meet.domain.meeting.entity.Team;
@@ -52,7 +52,7 @@ public class MeetingQueryServiceImpl implements MeetingQueryService {
     @Autowired
     private MeetingQueryServiceImpl self;      // 프록시 객체를 통한 트랜잭션 분리
 
-    private final FcmProfileMessageServiceImpl fcmProfileMessageServiceImpl;
+    private final FcmProfileMessageService fcmProfileMessageService;
 
     private final Event event = Event.AU_2025;
 
@@ -94,7 +94,7 @@ public class MeetingQueryServiceImpl implements MeetingQueryService {
             team.setViewCount(team.getViewCount() + 1);
         }
 
-        fcmProfileMessageServiceImpl.messagingProfileViewTwoTwoUsers(teamList);
+        fcmProfileMessageService.messagingProfileViewTwoTwoUsers(teamList);
     }
 
     @Override
@@ -258,7 +258,7 @@ public class MeetingQueryServiceImpl implements MeetingQueryService {
         }
 
         userProfileRepository.saveAll(profiles);
-        fcmProfileMessageServiceImpl.messagingProfileViewOneOneUsers(profiles);
+        fcmProfileMessageService.messagingProfileViewOneOneUsers(profiles);
     }
 
     @Override
