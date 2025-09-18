@@ -8,7 +8,7 @@ import com.gdg.z_meet.domain.user.repository.UserRepository;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
 import org.springframework.messaging.handler.annotation.Header;
-import com.gdg.z_meet.global.jwt.JwtUtil;
+import com.gdg.z_meet.global.security.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;

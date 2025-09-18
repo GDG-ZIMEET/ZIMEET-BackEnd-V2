@@ -1,75 +1,34 @@
-package com.gdg.z_meet.domain.fcm.service;
+package com.gdg.z_meet.domain.fcm.service.core;
 
 import com.gdg.z_meet.domain.fcm.entity.FcmToken;
 import com.gdg.z_meet.domain.fcm.repository.FcmTokenRepository;
-import com.gdg.z_meet.domain.user.dto.UserReq;
-import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.domain.user.repository.UserRepository;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
 
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class FcmServiceImpl implements FcmService {
+public class FcmMessageServiceImpl implements FcmMessageService {
 
     private final UserRepository userRepository;
     private final FcmTokenRepository fcmTokenRepository;
 
-
     @Override
-    @Transactional
-    public boolean agreePush(Long userId, UserReq.pushAgreeReq req) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(Code.USER_NOT_FOUND));
-
-        user.setPushAgree(req.isPushAgree());
-        return req.isPushAgree();
-    }
-
-    @Override
-    @Transactional
-    public void syncFcmToken(Long userId, UserReq.saveFcmTokenReq req) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(Code.USER_NOT_FOUND));
-
-        if (!user.isPushAgree()) { throw new BusinessException(Code.FCM_PUSH_NOT_AGREED);}
-
-        String newToken = req.getFcmToken();
-        FcmToken token = fcmTokenRepository.findByUser(user).orElse(null);
-
-        if (token == null) {
-            fcmTokenRepository.save(FcmToken.builder()
-                    .user(user)
-                    .token(newToken)
-                    .build());
-            return;
-        }
-
-        // 토큰이 다를 때만 갱신
-        if (!newToken.equals(token.getToken())) {
-            token.setToken(newToken);
-        }
-    }
-
-
     @Transactional
     public void broadcastToAllUsers(String title, String body) {
-
-        List<FcmToken> tokens = fcmTokenRepository.findAllByUserPushAgreeTrue();  // 푸시 수신 동의 사용자만
+        List<FcmToken> tokens = fcmTokenRepository.findAllByUserPushAgreeTrue();
 
         for (FcmToken userToken : tokens) {
             String token = userToken.getToken();
@@ -110,11 +69,8 @@ public class FcmServiceImpl implements FcmService {
         }
     }
 
-
-
     @Override
     public void testFcmService(Long userId, String fcmToken) {
-
         userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(Code.USER_NOT_FOUND));
 

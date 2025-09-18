@@ -1,7 +1,6 @@
 package com.gdg.z_meet.global.config;
 
-import com.gdg.z_meet.global.jwt.JwtAuthenticationFilter;
-import com.gdg.z_meet.global.jwt.JwtUtil;
+import com.gdg.z_meet.global.security.jwt.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,6 +36,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/index.html", "/static/**", "/favicon.ico").permitAll()
                         .requestMatchers("/swagger", "/swagger/", "/swagger-ui/**", "/v3/api-docs/**").permitAll() // Swagger 허용
                         .requestMatchers("/api/user/**", "/api/booths/**", "/api/event/**").permitAll()   // /api 이하 경로 접근 허용
+                        .requestMatchers("/api/fcm/test/**").permitAll() // FCM 테스트 API 허용
                         .requestMatchers("/","/api/health").permitAll() // 인증 없이 접근 허용
                         .requestMatchers("/api/ws", "/api/ws/**", "/api/ws/info/**").permitAll()
                         .requestMatchers("/ws", "/ws/**", "/ws/info/**").permitAll()  // WebSocket 엔드포인트 허용

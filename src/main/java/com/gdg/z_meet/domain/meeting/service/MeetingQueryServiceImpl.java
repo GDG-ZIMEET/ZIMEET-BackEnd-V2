@@ -1,6 +1,6 @@
 package com.gdg.z_meet.domain.meeting.service;
 
-import com.gdg.z_meet.domain.fcm.service.custom.FcmProfileMessageService;
+import com.gdg.z_meet.domain.fcm.service.profile.FcmProfileMessageService;
 import com.gdg.z_meet.domain.meeting.converter.MeetingConverter;
 import com.gdg.z_meet.domain.meeting.dto.MeetingResponseDTO;
 import com.gdg.z_meet.domain.meeting.entity.Team;

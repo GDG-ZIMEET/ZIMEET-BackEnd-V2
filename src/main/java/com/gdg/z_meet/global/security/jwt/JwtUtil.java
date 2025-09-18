@@ -1,4 +1,4 @@
-package com.gdg.z_meet.global.jwt;
+package com.gdg.z_meet.global.security.jwt;
 
 import com.gdg.z_meet.domain.user.dto.Token;
 import com.gdg.z_meet.domain.user.repository.RefreshTokenRepository;

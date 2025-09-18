@@ -1,6 +1,5 @@
-package com.gdg.z_meet.global.jwt;
+package com.gdg.z_meet.global.security.jwt;
 
-import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.domain.user.repository.RefreshTokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -13,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;

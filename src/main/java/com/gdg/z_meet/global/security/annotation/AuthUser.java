@@ -1,4 +1,4 @@
-package com.gdg.z_meet.global.security;
+package com.gdg.z_meet.global.security.annotation;
 
 import io.swagger.v3.oas.annotations.Parameter;
 

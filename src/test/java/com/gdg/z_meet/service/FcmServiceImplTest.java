@@ -2,7 +2,7 @@ package com.gdg.z_meet.service;
 
 import com.gdg.z_meet.domain.fcm.entity.FcmToken;
 import com.gdg.z_meet.domain.fcm.repository.FcmTokenRepository;
-import com.gdg.z_meet.domain.fcm.service.FcmMessageClient;
+import com.gdg.z_meet.global.client.FcmMessageClient;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.domain.user.repository.UserRepository;
 import com.gdg.z_meet.global.exception.BusinessException;

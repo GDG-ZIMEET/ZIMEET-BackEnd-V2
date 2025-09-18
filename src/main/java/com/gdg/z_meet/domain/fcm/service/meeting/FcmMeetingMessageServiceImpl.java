@@ -1,13 +1,12 @@
-package com.gdg.z_meet.domain.fcm.service.custom;
+package com.gdg.z_meet.domain.fcm.service.meeting;
 
-import com.gdg.z_meet.domain.fcm.service.FcmMessageClient;
+
+import com.gdg.z_meet.global.client.FcmMessageClient;
 import com.gdg.z_meet.domain.meeting.dto.MeetingResponseDTO;
-import com.gdg.z_meet.domain.meeting.entity.enums.Event;
 import com.gdg.z_meet.domain.meeting.repository.HiRepository;
 import com.gdg.z_meet.domain.meeting.repository.TeamRepository;
 import com.gdg.z_meet.domain.meeting.repository.UserTeamRepository;
 import com.gdg.z_meet.domain.meeting.service.HiQueryService;
-import com.gdg.z_meet.domain.meeting.service.HiQueryServiceImpl;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.domain.user.entity.UserProfile;
 import com.gdg.z_meet.domain.user.repository.UserProfileRepository;
@@ -16,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 
 import java.time.LocalDateTime;
@@ -25,7 +23,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class FcmMeetingMessageService {
+public class FcmMeetingMessageServiceImpl implements FcmMeetingMessageService {
 
     private final UserProfileRepository userProfileRepository;
     private final TeamRepository teamRepository;
@@ -37,6 +35,7 @@ public class FcmMeetingMessageService {
     private final HiQueryService hiQueryService;
     private final UserRepository userRepository;
 
+    @Override
     @Scheduled(fixedRate = 3600000)      // 1시간마다 실행
     public void messagingNoneMeetingOneOneUsers() {
         LocalDateTime threshold = LocalDateTime.now().minusHours(24);
@@ -52,12 +51,10 @@ public class FcmMeetingMessageService {
                 user.setFcmSendOneOne(true);
                 userProfileRepository.save(user);
             }
-//            else {
-//                log.warn("1:1 프로필 관련 FCM 메시지 전송 실패 - userId={}", user.getId());
-//            }
         }
     }
 
+    @Override
     @Scheduled(fixedRate = 3600000)      // 1시간마다 실행
     public void messagingNoneMeetingTwoTwoUsers() {
         LocalDateTime threshold = LocalDateTime.now().minusHours(24);
@@ -82,6 +79,7 @@ public class FcmMeetingMessageService {
 
     ////////////////
 
+    @Override
     // 하이 보내기 호출 시, 실행되므로 스케줄링 적용 하지 않음
     public void messagingHiToUser(Long targetUserId) {
         if (targetUserId == null) { return ;}
@@ -96,6 +94,7 @@ public class FcmMeetingMessageService {
     }
 
 
+    @Override
     @Scheduled(fixedRate = 600000)    // 10분 마다
     public void messagingNotAcceptHiToUser() {
 
@@ -121,6 +120,7 @@ public class FcmMeetingMessageService {
 
     ////////////////
 
+    @Override
     // 하이 보내기 호출 시, 실행되므로 스케줄링 적용 하지 않음
     public void messagingHiToTeam(Long targetTeamId) {
         if (targetTeamId == null) { return ;}
@@ -138,6 +138,7 @@ public class FcmMeetingMessageService {
         }
     }
 
+    @Override
     @Scheduled(fixedRate = 600000)  // 10분 마다
     public void messagingNotAcceptHiToTeam() {
 

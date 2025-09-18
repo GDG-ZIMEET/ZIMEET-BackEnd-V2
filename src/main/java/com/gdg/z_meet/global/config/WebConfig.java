@@ -1,6 +1,6 @@
 package com.gdg.z_meet.global.config;
 
-import com.gdg.z_meet.global.jwt.AuthUserArgumentResolver;
+import com.gdg.z_meet.global.security.jwt.AuthUserArgumentResolver;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;

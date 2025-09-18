@@ -8,7 +8,7 @@ import com.gdg.z_meet.domain.meeting.service.HiQueryService;
 import com.gdg.z_meet.domain.meeting.service.MeetingCommandService;
 import com.gdg.z_meet.domain.meeting.service.MeetingQueryService;
 import com.gdg.z_meet.global.response.Response;
-import com.gdg.z_meet.global.security.AuthUser;
+import com.gdg.z_meet.global.security.annotation.AuthUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
