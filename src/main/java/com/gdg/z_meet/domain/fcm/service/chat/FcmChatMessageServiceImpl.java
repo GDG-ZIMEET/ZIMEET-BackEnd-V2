@@ -34,7 +34,6 @@ public class FcmChatMessageServiceImpl implements FcmChatMessageService {
 
 
     @Override
-    @Override
     public void messagingChat(ChatMessage chatMessage) {
         Long roomId = chatMessage.getRoomId();
         Long senderId = chatMessage.getSenderId();
@@ -99,7 +98,6 @@ public class FcmChatMessageServiceImpl implements FcmChatMessageService {
                 .collect(Collectors.toList());
     }
 
-    @Override
     @Override
     public void messagingOpenChatRoom(User user, Long roomId) {
 
