@@ -1,5 +1,5 @@
 
-package com.gdg.z_meet.domain.fcm.service.custom;
+package com.gdg.z_meet.domain.fcm.service.chat;
 
 import com.gdg.z_meet.domain.chat.dto.ChatMessage;
 import com.gdg.z_meet.domain.chat.entity.ChatRoom;
@@ -8,7 +8,7 @@ import com.gdg.z_meet.domain.chat.entity.TeamChatRoom;
 import com.gdg.z_meet.domain.chat.repository.ChatRoomRepository;
 import com.gdg.z_meet.domain.chat.repository.JoinChatRepository;
 import com.gdg.z_meet.domain.chat.repository.TeamChatRoomRepository;
-import com.gdg.z_meet.domain.fcm.service.FcmMessageClient;
+import com.gdg.z_meet.global.client.FcmMessageClient;
 import com.gdg.z_meet.domain.meeting.entity.Team;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.global.exception.BusinessException;
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class FcmChatMessageService {
+public class FcmChatMessageServiceImpl implements FcmChatMessageService {
 
     private final FcmMessageClient fcmMessageClient;
     private final ChatRoomRepository chatRoomRepository;
@@ -33,6 +33,8 @@ public class FcmChatMessageService {
     private final JoinChatRepository joinChatRepository;
 
 
+    @Override
+    @Override
     public void messagingChat(ChatMessage chatMessage) {
         Long roomId = chatMessage.getRoomId();
         Long senderId = chatMessage.getSenderId();
@@ -97,7 +99,8 @@ public class FcmChatMessageService {
                 .collect(Collectors.toList());
     }
 
-
+    @Override
+    @Override
     public void messagingOpenChatRoom(User user, Long roomId) {
 
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)

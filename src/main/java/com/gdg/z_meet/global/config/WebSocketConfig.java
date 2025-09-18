@@ -1,6 +1,6 @@
 package com.gdg.z_meet.global.config;
 
-import com.gdg.z_meet.global.jwt.StompAuthInterceptor;
+import com.gdg.z_meet.global.security.jwt.StompAuthInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;

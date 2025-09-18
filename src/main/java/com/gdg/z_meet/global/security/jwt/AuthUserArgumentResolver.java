@@ -1,6 +1,6 @@
-package com.gdg.z_meet.global.jwt;
+package com.gdg.z_meet.global.security.jwt;
 
-import com.gdg.z_meet.global.security.AuthUser;
+import com.gdg.z_meet.global.security.annotation.AuthUser;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;

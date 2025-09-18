@@ -2,13 +2,12 @@ package com.gdg.z_meet.domain.chat.service;
 
 import com.gdg.z_meet.domain.chat.dto.ChatMessage;
 import com.gdg.z_meet.domain.chat.entity.status.MessageType;
-import com.gdg.z_meet.domain.fcm.service.custom.FcmChatMessageService;
+import com.gdg.z_meet.domain.fcm.service.chat.FcmChatMessageServiceImpl;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.domain.user.repository.UserRepository;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
 import lombok.RequiredArgsConstructor;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -18,7 +17,7 @@ import java.time.LocalDateTime;
 public class ChatService {
     private final MessageCommandService messageCommandService;
     private final UserRepository userRepository;
-    private final FcmChatMessageService fcmChatMessageService;
+    private final FcmChatMessageServiceImpl fcmChatMessageServiceImpl;
 
     public void handleMessage(ChatMessage message) {
         messageCommandService.processMessage(message);
@@ -37,7 +36,7 @@ public class ChatService {
                 .emoji(null) // 입장/퇴장 메시지는 이모지 필요 없음
                 .build();
 
-        fcmChatMessageService.messagingOpenChatRoom(user, roomId);
+        fcmChatMessageServiceImpl.messagingOpenChatRoom(user, roomId);
 
         handleMessage(message);
     }

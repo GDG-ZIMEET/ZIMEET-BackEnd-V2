@@ -1,13 +1,11 @@
 package com.gdg.z_meet.domain.user.controller;
 
-import com.gdg.z_meet.global.common.AuthenticatedUserUtils;
-import com.gdg.z_meet.global.jwt.JwtUtil;
+import com.gdg.z_meet.global.security.jwt.JwtUtil;
 import com.gdg.z_meet.global.response.Response;
 import com.gdg.z_meet.domain.user.dto.Token;
 import com.gdg.z_meet.domain.user.dto.UserReq;
 import com.gdg.z_meet.domain.user.dto.UserRes;
 import com.gdg.z_meet.domain.user.service.UserService;
-import com.gdg.z_meet.global.security.AuthUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;

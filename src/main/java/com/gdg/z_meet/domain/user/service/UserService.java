@@ -7,7 +7,7 @@ import com.gdg.z_meet.domain.user.entity.enums.Level;
 import com.gdg.z_meet.domain.user.repository.RefreshTokenRepository;
 import com.gdg.z_meet.domain.user.repository.UserProfileRepository;
 import com.gdg.z_meet.global.exception.BusinessException;
-import com.gdg.z_meet.global.jwt.JwtUtil;
+import com.gdg.z_meet.global.security.jwt.JwtUtil;
 import com.gdg.z_meet.domain.user.dto.Token;
 import com.gdg.z_meet.domain.user.dto.UserReq;
 import com.gdg.z_meet.domain.user.dto.UserRes;

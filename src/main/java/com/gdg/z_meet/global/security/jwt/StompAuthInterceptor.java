@@ -1,4 +1,4 @@
-package com.gdg.z_meet.global.jwt;
+package com.gdg.z_meet.global.security.jwt;
 
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;

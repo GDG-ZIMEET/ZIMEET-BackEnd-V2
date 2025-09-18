@@ -7,7 +7,7 @@ import com.gdg.z_meet.domain.chat.entity.ChatRoom;
 import com.gdg.z_meet.domain.chat.entity.Message;
 import com.gdg.z_meet.domain.chat.repository.ChatRoomRepository;
 import com.gdg.z_meet.domain.chat.repository.mongo.MongoMessageRepository;
-import com.gdg.z_meet.domain.fcm.service.custom.FcmChatMessageService;
+import com.gdg.z_meet.domain.fcm.service.chat.FcmChatMessageServiceImpl;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.domain.user.repository.UserRepository;
 import com.gdg.z_meet.global.exception.BusinessException;
@@ -23,7 +23,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -45,7 +44,7 @@ public class MessageCommandService {
     private static final String CHAT_ROOM_LATEST_MESSAGE_TIME_KEY = "chatroom:%s:latestMessageTime";
     private static final int MAX_REDIS_MESSAGES = 300; // 최신 300개 Redis에 유지
 
-    private final FcmChatMessageService fcmChatMessageService;
+    private final FcmChatMessageServiceImpl fcmChatMessageServiceImpl;
 
     @Transactional
     public void processMessage(ChatMessage chatMessage) {
@@ -56,7 +55,7 @@ public class MessageCommandService {
 
     public void notifyBackgroundUser(ChatMessage chatMessage) {
         try {
-            fcmChatMessageService.messagingChat(chatMessage);
+            fcmChatMessageServiceImpl.messagingChat(chatMessage);
         } catch (Exception e) {
             log.warn("FCM 전송 실패 - chatRoomId={}, senderId={}", chatMessage.getRoomId(), chatMessage.getSenderId(), e);
         }

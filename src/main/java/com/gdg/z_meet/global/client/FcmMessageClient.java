@@ -1,4 +1,4 @@
-package com.gdg.z_meet.domain.fcm.service;
+package com.gdg.z_meet.global.client;
 
 import com.gdg.z_meet.domain.fcm.entity.FcmToken;
 import com.gdg.z_meet.domain.fcm.repository.FcmTokenRepository;
@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Set;
 
 @Service
@@ -32,10 +31,7 @@ public class FcmMessageClient {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(Code.USER_NOT_FOUND));
 
-        if (!user.isPushAgree()) {
-//            log.info("푸시 알림 비동의 상태: userId={}", userId);
-            return false;
-        }
+        if (!user.isPushAgree()) {return false;}
 
         FcmToken userToken = fcmTokenRepository.findByUser(user).orElse(null);
 

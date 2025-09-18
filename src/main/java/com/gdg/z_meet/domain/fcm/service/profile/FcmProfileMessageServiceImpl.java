@@ -1,6 +1,6 @@
-package com.gdg.z_meet.domain.fcm.service.custom;
+package com.gdg.z_meet.domain.fcm.service.profile;
 
-import com.gdg.z_meet.domain.fcm.service.FcmMessageClient;
+import com.gdg.z_meet.global.client.FcmMessageClient;
 import com.gdg.z_meet.domain.meeting.entity.Team;
 import com.gdg.z_meet.domain.meeting.entity.UserTeam;
 import com.gdg.z_meet.domain.meeting.repository.TeamRepository;
@@ -10,7 +10,6 @@ import com.gdg.z_meet.domain.user.repository.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -19,13 +18,14 @@ import java.util.TreeMap;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class FcmProfileMessageService {
+public class FcmProfileMessageServiceImpl implements FcmProfileMessageService {
 
     private final FcmMessageClient fcmMessageClient;
     private final UserTeamRepository userTeamRepository;
     private final UserProfileRepository userProfileRepository;
     private final TeamRepository teamRepository;
 
+    @Override
     // 프로필 조회 API 호출 시 실행되어야
     public void messagingProfileViewOneOneUsers(List<UserProfile> profiles) {
         Map<Integer, String> messageTitles = new TreeMap<>(Map.of(
@@ -68,6 +68,7 @@ public class FcmProfileMessageService {
     }
 
 
+    @Override
     public void messagingProfileViewTwoTwoUsers(List<Team> teams) {
         Map<Integer, String> messageTitles = new TreeMap<>(Map.of(
                 10, "🥳 우리 팀 프로필을 10명이나 봤어요! 🎉 인기 폭발 시작이에요!",
