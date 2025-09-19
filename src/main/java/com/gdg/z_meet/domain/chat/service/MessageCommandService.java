@@ -68,13 +68,14 @@ public class MessageCommandService {
         // Redis에 메시지 저장
         String chatRoomMessagesKey = String.format(CHAT_ROOM_MESSAGES_KEY, chatRoomId);
 
-        // Redis에 이미 동일 messageId의 메시지가 있는지 확인
+        // Redis에 이미 동일 messageId의 메시지가 있는지 확인(중복 메시지 체크)
         List<Object> recentMessages = redisTemplate.opsForList().range(chatRoomMessagesKey, -MAX_REDIS_MESSAGES, -1);
         boolean isDuplicate = recentMessages != null && recentMessages.stream().anyMatch(
                 obj -> ((ChatMessage)obj).getId().equals(chatMessage.getId())
         );
 
         if (!isDuplicate) {
+            //redis list에 메시지 추가(저장)
             redisTemplate.opsForList().rightPush(chatRoomMessagesKey, chatMessage);
 
             // 최신 메시지 및 활동 시간 업데이트
@@ -101,6 +102,7 @@ public class MessageCommandService {
 
         for (ChatRoom chatRoom : chatRooms) {
             Long chatRoomId = chatRoom.getId();
+            //redis에서 해당 채팅방의 메시지 모두 조회
             String chatRoomMessagesKey = String.format(CHAT_ROOM_MESSAGES_KEY, chatRoomId);
 
             Long totalMessages = redisTemplate.opsForList().size(chatRoomMessagesKey);
@@ -109,6 +111,7 @@ public class MessageCommandService {
             List<Object> messages = redisTemplate.opsForList().range(chatRoomMessagesKey, 0, -1);
             if (messages == null || messages.isEmpty()) continue;
 
+            // Redis에서 가져온 메시지를 ChatMessage 객체로 변환(역직렬화)
             List<ChatMessage> chatMessages = messages.stream()
                     .map(obj -> objectMapper.convertValue(obj, ChatMessage.class))
                     .filter(chatMessage -> chatMessage.getSenderId() != null)
@@ -125,7 +128,7 @@ public class MessageCommandService {
                     .map(Message::getMessageId)
                     .collect(Collectors.toSet());
 
-
+            //중복 메시지 제거(이미 mongodb에 저장된 메시지 제외)
             List<Message> messageList = chatMessages.stream()
                     .filter(msg -> !existingIds.contains(msg.getId()))
                     .map(chatMessage -> {
@@ -155,7 +158,7 @@ public class MessageCommandService {
             }  catch (Exception e) {
                 log.error("Mongo 저장 실패", e);
             }
-             //레디스에서 최신 n개의 메시지를 제외하고 모두 저장
+             //레디스에서 최신 n개의 메시지를 제외하고 모두 저장(trim)
             if (totalMessages > MAX_REDIS_MESSAGES) {
                 redisTemplate.opsForList().trim(chatRoomMessagesKey, -MAX_REDIS_MESSAGES, -1);
             }
