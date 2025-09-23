@@ -12,7 +12,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @Configuration
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
-public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+public class StompWebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final StompHandler stompHandler;
 
@@ -23,6 +23,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .withSockJS() // SockJS 지원
                 .setWebSocketEnabled(true)
                 .setSessionCookieNeeded(false);
+
+        registry.addEndpoint("/ws") // WebSocket 연결 URL
+                .setAllowedOriginPatterns("*");
 
         registry.addEndpoint("/ws/plain") // 일반 WebSocket 전용 (Postman 테스트용)
                 .setAllowedOriginPatterns("*");
