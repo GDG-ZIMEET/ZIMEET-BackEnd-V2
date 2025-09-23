@@ -12,6 +12,8 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.security.Principal;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -32,19 +34,24 @@ public class StompHandler implements ChannelInterceptor {
 
             if (!StringUtils.hasText(token) || !token.startsWith("Bearer ")) {
                 log.warn("토큰이 누락되었거나 형식이 잘못되었습니다.");
-                throw new IllegalArgumentException("JWT 토큰 누락 또는 형식 오류");
+//                throw new IllegalArgumentException("JWT 토큰 누락 또는 형식 오류");
+                return null; //예외 반환시 웹소켓 연결 해제되는 현상 방지위해 null 반환
             }
 
             token = token.substring(7); // "Bearer " 제거
 
             if (!jwtUtil.validateToken(token)) {
                 log.warn("유효하지 않은 JWT 토큰입니다.");
-                throw new IllegalArgumentException("유효하지 않은 JWT 토큰");
+//                throw new IllegalArgumentException("유효하지 않은 JWT 토큰");
+                return null;
             }
 
             // 토큰 유효성 검증 성공 시, 사용자 정보 추출 후 Principal 설정
             String studentNumber = jwtUtil.getStudentNumberFromToken(token);
             accessor.setUser(() -> studentNumber); // Principal 설정
+
+            //사용자 정보를 websocket 연결 컨텍스트에 저장 (이후 subscribe, send 시에도 꺼내 쓸 수 있게)
+            accessor.getSessionAttributes().put("user", studentNumber);
 
             log.info("stomp 연결 성공: {}", studentNumber);
         }
@@ -60,9 +67,7 @@ public class StompHandler implements ChannelInterceptor {
             }
 
             String studentNumber = accessor.getUser().getName(); // CONNECT 시 저장한 Principal (학번)
-
             String destination = accessor.getDestination();  // 예: /sub/chat/room/3
-
             Long chatRoomId = extractRoomIdFromDestination(destination);
 
             //#TODO:chatRoomService에서 hasAccess 메서드로 권한 확인 추가 예정
