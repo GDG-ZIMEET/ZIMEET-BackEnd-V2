@@ -11,7 +11,8 @@ public class RedisPublisher {
     private final RedisTemplate<String, Object> redisTemplate;
 
     // 메시지를 발행
-    public void publish(String channel, Object message) {
+    public void publishToRoom(Long roomId, Object message) {
+        String channel = "chat:room:" + roomId;
         redisTemplate.convertAndSend(channel, message);
     }
 
