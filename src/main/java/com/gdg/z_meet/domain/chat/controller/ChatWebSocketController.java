@@ -1,64 +1,43 @@
 package com.gdg.z_meet.domain.chat.controller;
 
 
-import com.gdg.z_meet.domain.chat.dto.ChatMessage;
-import com.gdg.z_meet.domain.chat.service.ChatService;
-import com.gdg.z_meet.domain.user.entity.User;
-import com.gdg.z_meet.domain.user.repository.UserRepository;
-import com.gdg.z_meet.global.exception.BusinessException;
-import com.gdg.z_meet.global.response.Code;
-import org.springframework.messaging.handler.annotation.Header;
-import com.gdg.z_meet.global.security.jwt.JwtUtil;
+import com.gdg.z_meet.domain.chat.dto.ChatMessageReq;
+import com.gdg.z_meet.domain.chat.dto.ChatMessageRes;
+import com.gdg.z_meet.domain.chat.service.ChatMessageHandlerService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
-
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.UUID;
 
 @Controller
 @RequiredArgsConstructor
 public class ChatWebSocketController {
 
-    private final JwtUtil jwtUtil;
-    private final UserRepository userRepository;
-    private final ChatService chatService;
+//    private final ChatMessageService chatMessageService;
+    private final ChatMessageHandlerService chatMessageHandlerService;
 
+    // prefix를 "/app"로 설정했으므로, 실제 메시지는 "/app/chat/{roomId}"로 전송됨
     @MessageMapping("/chat/{roomId}")
-    public void sendMessage(@DestinationVariable Long roomId, @Payload ChatMessage chatMessage, @Header("Authorization") String token) {
-        Long senderId = jwtUtil.extractUserIdFromToken(token);
-        User user = userRepository.findById(senderId)
-                .orElseThrow(() -> new BusinessException(Code.MEMBER_NOT_FOUND));
+    public void handleMessage(@DestinationVariable Long roomId,
+                              ChatMessageReq chatMessageReq,
+                              Message<?> message) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
 
-        String messageId = chatMessage.getId() != null ? chatMessage.getId() : UUID.randomUUID().toString();
-        LocalDateTime sendAt = chatMessage.getSendAt() != null ? chatMessage.getSendAt() : LocalDateTime.now(ZoneId.of("Asia/Seoul"));
-
-        chatMessage = ChatMessage.builder()
-                .id(messageId)
-                .type(chatMessage.getType())
-                .roomId(roomId)
-                .senderId(senderId)
-                .senderName(user.getUserProfile().getNickname())
-                .content(chatMessage.getContent())
-                .emoji(user.getUserProfile().getEmoji())
-                .sendAt(sendAt)
-                .build();
-
-        switch (chatMessage.getType()) {
-            case ENTER:
-                chatService.handleEnterMessage(roomId, chatMessage.getContent());
-                break;
-            case TALK:
-                chatService.handleTalkMessage(chatMessage);
-                break;
-            case EXIT:
-                chatService.handleExitMessage(roomId, senderId, chatMessage.getSenderName());
-                break;
-            default:
-                chatService.handleTalkMessage(chatMessage);
+        String studentNumber = null;
+        if (accessor.getUser() != null) {
+            studentNumber = accessor.getUser().getName();
+        } else if (accessor.getSessionAttributes() != null) {
+            studentNumber = (String) accessor.getSessionAttributes().get("user");
         }
+
+        if (studentNumber == null) {
+            throw new RuntimeException("사용자 정보 없음");
+        }
+
+        // 채팅 메시지 전송
+        chatMessageHandlerService.sendMessage(chatMessageReq);
+//        chatMessageService.sendMessage(roomId, chatMessageDto);
     }
 }
