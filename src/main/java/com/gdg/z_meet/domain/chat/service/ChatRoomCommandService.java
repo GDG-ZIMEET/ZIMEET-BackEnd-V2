@@ -9,7 +9,7 @@ import com.gdg.z_meet.domain.chat.entity.status.ChatType;
 import com.gdg.z_meet.domain.chat.entity.status.JoinChatStatus;
 import com.gdg.z_meet.domain.chat.repository.ChatRoomRepository;
 import com.gdg.z_meet.domain.chat.repository.JoinChatRepository;
-import com.gdg.z_meet.domain.chat.repository.mongo.MongoMessageRepository;
+import com.gdg.z_meet.domain.chat.repository.mongo.MessageRepository;
 import com.gdg.z_meet.domain.chat.repository.TeamChatRoomRepository;
 import com.gdg.z_meet.domain.meeting.entity.Hi;
 import com.gdg.z_meet.domain.meeting.entity.Team;
@@ -40,7 +40,7 @@ public class ChatRoomCommandService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final ChatRoomRepository chatRoomRepository;
-    private final MongoMessageRepository mongoMessageRepository;
+    private final MessageRepository messageRepository;
     private final JoinChatRepository joinChatRepository;
     private final UserRepository userRepository;
     private final UserTeamRepository userTeamRepository;
@@ -75,11 +75,11 @@ public class ChatRoomCommandService {
         Pageable pageable = PageRequest.of(0, batchSize);
 
         while (true) {
-            List<Message> messages = mongoMessageRepository.findByChatRoomId(String.valueOf(chatRoomId), pageable);
+            List<Message> messages = messageRepository.findByChatRoomId(String.valueOf(chatRoomId), pageable);
             if (messages.isEmpty()) {
                 break; // 더 이상 삭제할 메시지가 없으면 종료
             }
-            mongoMessageRepository.deleteAll(messages);
+            messageRepository.deleteAll(messages);
         }
 
         // 연관된 JoinChat 삭제
