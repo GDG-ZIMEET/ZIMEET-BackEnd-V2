@@ -1,6 +1,6 @@
 package com.gdg.z_meet.domain.chat.controller;
 
-import com.gdg.z_meet.domain.chat.dto.ChatMessage;
+import com.gdg.z_meet.domain.chat.dto.ChatMessageRes;
 import com.gdg.z_meet.domain.chat.dto.ChatRoomDto;
 import com.gdg.z_meet.domain.chat.service.*;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -87,13 +87,13 @@ public class ChatRoomController {
 
     @Operation(summary = "메시지 조회", description = "지정된 채팅방의 메시지를 조회합니다.")
     @GetMapping("/{roomId}/messages")
-    public ResponseEntity<List<ChatMessage>> getMessages(
+    public ResponseEntity<List<ChatMessageRes>> getMessages(
             @AuthUser Long userId,
             @PathVariable Long roomId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime lastMessageTime,
             @RequestParam(defaultValue = "20") int size // 페이지 크기 (기본값: 20)
     ) {
-        List<ChatMessage> messages = messageQueryService.getMessagesByChatRoom(roomId,userId, lastMessageTime, size);
+        List<ChatMessageRes> messages = messageQueryService.getMessagesByChatRoom(roomId,userId, lastMessageTime, size);
         return ResponseEntity.ok(messages);
     }
 }
