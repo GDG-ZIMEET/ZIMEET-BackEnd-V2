@@ -1,5 +1,6 @@
 package com.gdg.z_meet.domain.chat.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gdg.z_meet.domain.chat.dto.ChatMessageCacheDto;
 import com.gdg.z_meet.domain.chat.dto.ChatMessageReq;
 import com.gdg.z_meet.domain.chat.dto.ChatMessageRes;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -17,6 +19,7 @@ public class ChatRedisService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final RedisPublisher redisPublisher;
+    private final ObjectMapper objectMapper;
 
     private static final int MAX_REDIS_MESSAGES = 300;
 
@@ -38,13 +41,18 @@ public class ChatRedisService {
         redisTemplate.opsForValue().set("chatroom:" + messageDto.getRoomId() + ":latestMessageTime", LocalDateTime.now().toString());
 
         trimMessages(key);
+
+        // TTL 설정
+        redisTemplate.expire(key, Duration.ofDays(7));
+        redisTemplate.expire("chatroom:" + messageDto.getRoomId() + ":latestMessage", Duration.ofDays(7));
+        redisTemplate.expire("chatroom:" + messageDto.getRoomId() + ":latestMessageTime", Duration.ofDays(7));
     }
 
     // Redis 메시지 개수 제한
     private void trimMessages(String key) {
         Long totalMessages = redisTemplate.opsForList().size(key);
         if (totalMessages != null && totalMessages > MAX_REDIS_MESSAGES) {
-            redisTemplate.opsForList().trim(key, -MAX_REDIS_MESSAGES, -1);
+            redisTemplate.opsForList().trim(key, -MAX_REDIS_MESSAGES, -1); //최근 300개만 남기고 오래된 메시지들 삭제
         }
     }
 
@@ -53,7 +61,11 @@ public class ChatRedisService {
         String key = "chatroom:" + roomId + ":messages";
         List<Object> messages = redisTemplate.opsForList().range(key, -size, -1);
         if (messages == null) return List.of();
-        return messages.stream().map(obj -> (ChatMessageRes)obj).toList();
+
+        return messages.stream()
+                .map(obj -> objectMapper.convertValue(obj, ChatMessageCacheDto.class)) // LinkedHashMap → DTO 변환
+                .map(ChatMessageCacheDto::toResponse)
+                .toList();
     }
 
 //    // 메시지 발행
