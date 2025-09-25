@@ -45,7 +45,7 @@ public class FcmMeetingMessageServiceImpl implements FcmMeetingMessageService {
         String body = "‘1대1 참여하기’ 버튼으로 내 프로필을 활성화해야 상대방이 볼 수 있어요!";
 
         for (UserProfile user : users) {
-            fcmMessageProducer.sendSingleMessage(user.getId(), title, body);
+            fcmMessageProducer.sendSingleMessage(user.getUser().getId(), title, body);
             user.setFcmSendOneOne(true);
             userProfileRepository.save(user);
         }

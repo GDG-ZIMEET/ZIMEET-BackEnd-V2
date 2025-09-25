@@ -72,6 +72,12 @@ public class FcmMessageProducerImpl implements FcmMessageProducer {
 
     @Override
     public void sendTestMessage(Long userId, String fcmToken, String title, String body) {
+
+        if (fcmToken == null || fcmToken.isBlank()) {
+            log.warn("테스트 FCM 메시지를 큐에 전송하지 않습니다. userId={}, 사유=FCM 토큰 누락", userId);
+            return;
+        }
+
         FcmMessageRequest message = FcmMessageRequest.builder()
                 .messageId(UUID.randomUUID().toString())
                 .type(FcmMessageRequest.FcmType.TEST)

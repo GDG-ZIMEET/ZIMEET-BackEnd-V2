@@ -11,7 +11,9 @@ import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.context.annotation.Profile;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Profile("worker")
 public class FcmMessageConsumerImpl implements FcmMessageConsumer {
 
     private final FcmTokenRepository fcmTokenRepository;
@@ -63,7 +66,7 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
         } catch (Exception e) {
             log.error("FCM 메시지 처리 실패: messageId={}, error={}", 
                     fcmMessage.getMessageId(), e.getMessage(), e);
-            throw e;
+            throw new AmqpRejectAndDontRequeueException("FCM 메시지 처리 실패로 재큐 방지: messageId=" + fcmMessage.getMessageId(), e);
         }
     }
 
