@@ -41,11 +41,12 @@ jobs:
             gradle-${{ runner.os }}-
 
       - name: Run Unit Tests
+        if: github.ref != 'refs/heads/main'
         run: SPRING_PROFILES_ACTIVE=test ./gradlew clean test --stacktrace
 
       - name: Run Tests with Coverage
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: ./gradlew jacocoTestReport
+        run: ./gradlew clean jacocoTestReport --stacktrace
 
       - name: Create application.yml
         run: |
