@@ -9,6 +9,9 @@ import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -33,8 +36,8 @@ public class ChatMongoService {
 
         Message message = Message.builder()
                 .messageId(UUID.randomUUID().toString())
-                .chatRoomId(req.getRoomId().toString())
-                .userId(user.getId().toString())
+                .chatRoomId(req.getRoomId())
+                .userId(user.getId())
                 .content(req.getContent())
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -44,15 +47,32 @@ public class ChatMongoService {
     }
 
     // Look-Aside: DB 조회 (Redis에 캐싱은 외부에서 수행)
-    public List<Message> getMessagesBefore(Long roomId, LocalDateTime before, int limit) {
+    public List<Message> getMessages(Long chatRoomId, LocalDateTime lastMessageTime, int size) {
+        if (lastMessageTime == null) {
+            lastMessageTime = LocalDateTime.now();
+        }
 
-        Instant instant = before.atZone(ZoneId.systemDefault()).toInstant(); // 시스템 시간대 → UTC
-        Date utcDate = Date.from(instant); // MongoDB 비교용
+        Instant instant = lastMessageTime.atZone(ZoneId.systemDefault()).toInstant();
+        Date utcDate = Date.from(instant);
+
+        Pageable pageable = PageRequest.of(0, size, Sort.by("createdAt").descending());
 
         return messageRepository.findByChatRoomIdAndCreatedAtBefore(
-                roomId.toString(), utcDate, org.springframework.data.domain.PageRequest.of(0, limit)
+                chatRoomId.toString(), utcDate, pageable
         );
     }
+
+
+//    // Look-Aside: DB 조회 (Redis에 캐싱은 외부에서 수행)
+//    public List<Message> getMessagesBefore(Long roomId, LocalDateTime before, int limit) {
+//
+//        Instant instant = before.atZone(ZoneId.systemDefault()).toInstant(); // 시스템 시간대 → UTC
+//        Date utcDate = Date.from(instant); // MongoDB 비교용
+//
+//        return messageRepository.findByChatRoomIdAndCreatedAtBefore(
+//                roomId.toString(), utcDate, org.springframework.data.domain.PageRequest.of(0, limit)
+//        );
+//    }
 
 //    @Transactional
 //    public void saveBatchToMongo(List<ChatMessageDto> messageDtos, Long roomId) {
