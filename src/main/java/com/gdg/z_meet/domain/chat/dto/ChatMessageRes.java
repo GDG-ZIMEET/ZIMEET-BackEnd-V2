@@ -30,8 +30,8 @@ public class ChatMessageRes implements Serializable {
         return ChatMessageRes.builder()
                 .id(message.getMessageId())
                 .type(MessageType.CHAT)  // Mongo에는 type 없음 → 기본값 CHAT
-                .roomId(Long.parseLong(message.getChatRoomId()))
-                .senderId(Long.parseLong(message.getUserId()))
+                .roomId(message.getChatRoomId())
+                .senderId(message.getUserId())
                 .content(message.getContent())
                 .sendAt(message.getCreatedAt())
                 // senderName, emoji는 DB에 없으므로 null → Service 계층에서 UserRepository로 보강 가능

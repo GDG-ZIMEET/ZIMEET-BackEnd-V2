@@ -28,8 +28,8 @@ public class Message {
     private String content;
     private Boolean isRead;
 
-    private String userId;
-    private String chatRoomId;
+    private Long userId;
+    private Long chatRoomId;
 
     @Field("createdAt")
     private LocalDateTime createdAt;
@@ -42,8 +42,8 @@ public class Message {
                 .messageId(dto.getId() != null ? dto.getId() : UUID.randomUUID().toString())
                 .content(dto.getContent())
                 .isRead(false)
-                .userId(String.valueOf(dto.getSenderId()))
-                .chatRoomId(String.valueOf(dto.getRoomId()))
+                .userId(dto.getSenderId())
+                .chatRoomId(dto.getRoomId())
                 .createdAt(dto.getSendAt() != null ? dto.getSendAt() : LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
