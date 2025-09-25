@@ -40,17 +40,17 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      - name: Create application.yml
-        run: |
-          mkdir -p ./src/main/resources
-          echo "${{ secrets.APPLICATION }}" > ./src/main/resources/application-prod.yml
-
       - name: Run Unit Tests
-        run: ./gradlew clean test --stacktrace
+        run: SPRING_PROFILES_ACTIVE=test ./gradlew clean test --stacktrace
 
       - name: Run Tests with Coverage
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: ./gradlew jacocoTestReport
+
+      - name: Create application.yml
+        run: |
+          mkdir -p ./src/main/resources
+          echo "${{ secrets.APPLICATION }}" > ./src/main/resources/application-prod.yml
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
