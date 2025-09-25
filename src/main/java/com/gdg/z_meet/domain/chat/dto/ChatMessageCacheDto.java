@@ -20,6 +20,7 @@ public class ChatMessageCacheDto implements Serializable {
     private MessageType type;
     private Long roomId;
     private Long senderId;
+//    private String senderName;
     private String content;
     private LocalDateTime sendAt;
 
@@ -42,8 +43,21 @@ public class ChatMessageCacheDto implements Serializable {
                 response.getType(),
                 response.getRoomId(),
                 response.getSenderId(),
+//                response.getSenderName(),
                 response.getContent(),
                 response.getSendAt()
         );
+    }
+
+    // 🔑 Redis에서 꺼낼 때 ChatMessageRes로 변환
+    public ChatMessageRes toResponse() {
+        return ChatMessageRes.builder()
+                .id(this.id)
+                .type(this.type)
+                .roomId(this.roomId)
+                .senderId(this.senderId)
+                .content(this.content)
+                .sendAt(this.sendAt)
+                .build();
     }
 }
