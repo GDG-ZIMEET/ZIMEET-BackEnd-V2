@@ -1,7 +1,7 @@
 
 package com.gdg.z_meet.domain.fcm.service.chat;
 
-import com.gdg.z_meet.domain.chat.dto.ChatMessage;
+import com.gdg.z_meet.domain.chat.dto.ChatMessageRes;
 import com.gdg.z_meet.domain.chat.entity.ChatRoom;
 import com.gdg.z_meet.domain.chat.entity.JoinChat;
 import com.gdg.z_meet.domain.chat.entity.TeamChatRoom;
@@ -34,10 +34,10 @@ public class FcmChatMessageServiceImpl implements FcmChatMessageService {
 
 
     @Override
-    public void messagingChat(ChatMessage chatMessage) {
-        Long roomId = chatMessage.getRoomId();
-        Long senderId = chatMessage.getSenderId();
-        String body = chatMessage.getContent();        // 채팅 내용 그대로 전달
+    public void messagingChat(ChatMessageRes chatMessageRes) {
+        Long roomId = chatMessageRes.getRoomId();
+        Long senderId = chatMessageRes.getSenderId();
+        String body = chatMessageRes.getContent();        // 채팅 내용 그대로 전달
 
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(Code.CHATROOM_NOT_FOUND));
