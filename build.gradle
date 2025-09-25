@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.3.1'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'jacoco'
 }
 
 group = 'com.example'
@@ -54,7 +55,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
 	// firebase
-	implementation 'com.google.firebase:firebase-admin:9.2.0'           // Google Firebase Admin
+	implementation 'com.google.firebase:firebase-admin:9.2.0'
 	implementation 'com.fasterxml.jackson.core:jackson-core:2.16.1'
 
 	// RabbitMQ
@@ -81,12 +82,22 @@ jar {
 
 tasks.named('test') {
 	useJUnitPlatform()
-}
-
-tasks.withType(Test) {
-	enabled = false
+	finalizedBy 'jacocoTestReport'
 }
 
 clean {
 	delete file('src/main/generated')
+}
+
+jacoco {
+	toolVersion = "0.8.11" // 최신 안정 버전
+}
+
+jacocoTestReport {
+	dependsOn test
+	reports {
+		xml.required = true
+		csv.required = false
+		html.required = true
+	}
 }
