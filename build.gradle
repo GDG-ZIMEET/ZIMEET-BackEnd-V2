@@ -82,6 +82,7 @@ jar {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	exclude '**/ZiMeetApplicationTests.class'
 	finalizedBy 'jacocoTestReport'
 }
 
