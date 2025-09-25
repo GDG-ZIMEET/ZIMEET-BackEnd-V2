@@ -29,3 +29,28 @@ spring:
   web:
     resources:
       static-locations: classpath:/static/, file:/static/
+
+# RabbitMQ Consumer 비활성화
+api:
+  enabled: true             # API 서버 활성화
+
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASSWORD:1234}
+    virtual-host: /
+
+    listener:
+      simple:
+        enabled: false       # API 서버에서는 Consumer 비활성화
+        prefetch: 10         # (비활성화여도 기본값 정의는 가능)
+        concurrency: 3
+        max-concurrency: 10
+        retry:
+          enabled: true
+          initial-interval: 2000
+          max-attempts: 5
+        
+scheduling:
+  enabled: true
