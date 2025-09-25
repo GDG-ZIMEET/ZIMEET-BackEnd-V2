@@ -106,7 +106,7 @@ jobs:
             
             sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest|g" docker-compose.prod.yml
             
-            docker-compose -f docker-compose.prod.yml -f docker-compose.kafka-rabbitmq.yml down --remove-orphans
-            docker-compose -f docker-compose.prod.yml -f docker-compose.kafka-rabbitmq.yml up -d
+            docker-compose -f docker-compose.prod.yml -f docker-compose.worker-mq.yml down --remove-orphans
+            docker-compose -f docker-compose.prod.yml -f docker-compose.worker-mq.yml up -d
             
             docker image prune -af --filter "until=24h"

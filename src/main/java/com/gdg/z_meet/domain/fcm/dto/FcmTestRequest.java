@@ -6,10 +6,10 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class FcmTestReq {
+public class FcmTestRequest {
     private  String fcmToken;
 
-    public FcmTestReq(String fcmToken) {
+    public FcmTestRequest(String fcmToken) {
         this.fcmToken = fcmToken;
     }
 }

@@ -20,6 +20,9 @@ public class FcmTokenServiceImpl implements FcmTokenService {
     private final UserRepository userRepository;
     private final FcmTokenRepository fcmTokenRepository;
 
+    /**
+     *  FCM 푸시 알림 사용자 동의 여부
+     */
     @Override
     @Transactional
     public boolean agreePush(Long userId, UserReq.pushAgreeReq req) {
@@ -30,6 +33,9 @@ public class FcmTokenServiceImpl implements FcmTokenService {
         return req.isPushAgree();
     }
 
+    /**
+     *  FCM 코큰 갱신
+     */
     @Override
     @Transactional
     public void syncFcmToken(Long userId, UserReq.saveFcmTokenReq req) {

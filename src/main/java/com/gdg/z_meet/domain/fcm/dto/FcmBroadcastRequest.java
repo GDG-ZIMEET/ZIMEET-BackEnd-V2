@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class FcmBroadcastReq {
+public class FcmBroadcastRequest {
     private String title;
     private String body;
 }

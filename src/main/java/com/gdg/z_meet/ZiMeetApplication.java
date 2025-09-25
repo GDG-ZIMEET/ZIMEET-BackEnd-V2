@@ -11,7 +11,7 @@ import java.util.TimeZone;
 @SpringBootApplication
 @EnableJpaAuditing
 @EnableScheduling
-public class Application {
+public class ZiMeetApplication {
 
 	@PostConstruct
 	public void init() {
@@ -19,7 +19,7 @@ public class Application {
 	}
 
 	public static void main(String[] args) {
-		SpringApplication.run(Application.class, args);
+		SpringApplication.run(ZiMeetApplication.class, args);
 	}
 
 }

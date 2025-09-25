@@ -1,7 +1,7 @@
 package com.gdg.z_meet.domain.fcm.service.meeting;
 
 
-import com.gdg.z_meet.global.client.FcmMessageClient;
+import com.gdg.z_meet.domain.fcm.service.producer.FcmMessageProducer;
 import com.gdg.z_meet.domain.meeting.dto.MeetingResponseDTO;
 import com.gdg.z_meet.domain.meeting.repository.HiRepository;
 import com.gdg.z_meet.domain.meeting.repository.TeamRepository;
@@ -31,7 +31,7 @@ public class FcmMeetingMessageServiceImpl implements FcmMeetingMessageService {
     private final HiRepository hiRepository;
 
 
-    private final FcmMessageClient fcmMessageClient;
+    private final FcmMessageProducer fcmMessageProducer;
     private final HiQueryService hiQueryService;
     private final UserRepository userRepository;
 
@@ -45,12 +45,9 @@ public class FcmMeetingMessageServiceImpl implements FcmMeetingMessageService {
         String body = "‘1대1 참여하기’ 버튼으로 내 프로필을 활성화해야 상대방이 볼 수 있어요!";
 
         for (UserProfile user : users) {
-            boolean success = fcmMessageClient.sendFcmMessage(user.getId(), title, body);
-
-            if (success) {
-                user.setFcmSendOneOne(true);
-                userProfileRepository.save(user);
-            }
+            fcmMessageProducer.sendSingleMessage(user.getUser().getId(), title, body);
+            user.setFcmSendOneOne(true);
+            userProfileRepository.save(user);
         }
     }
 
@@ -64,33 +61,24 @@ public class FcmMeetingMessageServiceImpl implements FcmMeetingMessageService {
         String body = "마음 맞는 친구와 팀을 만들어보세요. 함께하면 매칭 확률이 훨씬 높아져요 🔥";
 
         for (User user : users) {
-
-            boolean success = fcmMessageClient.sendFcmMessage(user.getId(), title, body);
-
-            if (success) {
-                user.setFcmSendTwoTwo(true);
-                userRepository.save(user);
-            }
-//            else {
-//                log.warn("2:2 팀매칭 관련 FCM 메시지 실패 처리됨 - userId={}", user.getId());
-//            }
+            fcmMessageProducer.sendSingleMessage(user.getId(), title, body);
+            user.setFcmSendTwoTwo(true);
+            userRepository.save(user);
         }
     }
 
-    ////////////////
 
+    /**
+     *  하이 보내기 호출 시, 실행되므로 스케줄링 적용 하지 않음
+     */
     @Override
-    // 하이 보내기 호출 시, 실행되므로 스케줄링 적용 하지 않음
     public void messagingHiToUser(Long targetUserId) {
         if (targetUserId == null) { return ;}
 
         String title = "❤️나에게 하이가 도착했어요! 💌";
         String body = "ZI밋에서 어떤 사람에게 하이가 왔는지 확인해보세요!";
 
-        boolean success = fcmMessageClient.sendFcmMessage(targetUserId, title, body);
-        if (!success) {
-            log.warn("FCM 하이 메시지 실패 처리됨 - targetUserId={}", targetUserId);
-        }
+        fcmMessageProducer.sendSingleMessage(targetUserId, title, body);
     }
 
 
@@ -111,17 +99,15 @@ public class FcmMeetingMessageServiceImpl implements FcmMeetingMessageService {
                 continue;       // 받은 하이가 없음 → FCM 전송 스킵
             }
 
-            boolean success = fcmMessageClient.sendFcmMessage(userId, title, body);
-            if(!success) {
-                log.warn("FCM 받은 하이 여부 메시지 전송 실패 userId: {}", userId);
-            }
+            fcmMessageProducer.sendSingleMessage(userId, title, body);
         }
     }
 
-    ////////////////
 
+    /**
+     *  하이 보내기 호출 시, 실행되므로 스케줄링 적용 하지 않음
+     */
     @Override
-    // 하이 보내기 호출 시, 실행되므로 스케줄링 적용 하지 않음
     public void messagingHiToTeam(Long targetTeamId) {
         if (targetTeamId == null) { return ;}
 
@@ -131,10 +117,7 @@ public class FcmMeetingMessageServiceImpl implements FcmMeetingMessageService {
         String body = "ZI밋에서 어떤 팀에게 하이가 왔는지 확인해보세요! ";
 
         for (Long userId : userIds) {
-            boolean success = fcmMessageClient.sendFcmMessage(userId, title, body);
-            if(!success) {
-                log.warn("FCM 하이(팀) 메시지 전송 실패 - userId: {}", userId);
-            }
+            fcmMessageProducer.sendSingleMessage(userId, title, body);
         }
     }
 
@@ -157,10 +140,7 @@ public class FcmMeetingMessageServiceImpl implements FcmMeetingMessageService {
                 continue;       // 받은 하이가 없음 → FCM 전송 스킵
             }
 
-            boolean success = fcmMessageClient.sendFcmMessage(userId, title, body);
-            if(!success) {
-                log.warn(" FCM 받은 하이 여부 메시지 전송 실패 userId: {}", userId);
-            }
+            fcmMessageProducer.sendSingleMessage(userId, title, body);
         }
     }
 }
