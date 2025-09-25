@@ -95,6 +95,10 @@ public class User extends BaseEntity implements UserDetails {
         this.password = password;
     }
 
+    public boolean isPushAgree() {
+        return pushAgree;
+    }
+
     public void setPushAgree(boolean pushAgree) { this.pushAgree = pushAgree;}
 
     public void setFcmSendTwoTwo(boolean fcmSendTwoTwo) {this.fcmSendTwoTwo = fcmSendTwoTwo;}
