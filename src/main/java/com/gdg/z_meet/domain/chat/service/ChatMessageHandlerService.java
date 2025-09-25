@@ -59,9 +59,6 @@ public class ChatMessageHandlerService {
 
         chatRedisService.publishAndCache(messageDto);
         chatNotificationService.notifyRoomOpen(user, messageDto.getRoomId());
-
-        // 👉 필요하다면 입장 기록도 Mongo에 저장
-        // chatMongoService.saveToMongo(messageDto, messageDto.getRoomId());
     }
 
     /**
@@ -74,35 +71,33 @@ public class ChatMessageHandlerService {
         //setType
 
         chatRedisService.publishAndCache(messageDto);
-
-        // 👉 필요하다면 퇴장 기록도 Mongo에 저장
-        // chatMongoService.saveToMongo(messageDto, messageDto.getRoomId());
     }
 
-    /**
-     * 메시지 조회 (Look-Aside)
-     */
-    public List<ChatMessageRes> getMessages(Long roomId, int size) {
-        // 1) Redis 캐시 조회
-        List<ChatMessageRes> cachedMessages = chatRedisService.getMessages(roomId, size);
-        if (!cachedMessages.isEmpty()) {
-            return cachedMessages;
-        }
 
-        // 2) Redis에 없으면 Mongo 조회
-        List<Message> mongoMessages = chatMongoService.getMessagesBefore(roomId, LocalDateTime.now(), size);
-
-        // 3) Mongo 결과 Redis 캐싱
-        mongoMessages.forEach(m -> {
-            ChatMessageRes dto = ChatMessageRes.fromEntity(m);
-
-            ChatMessageCacheDto cacheDto = ChatMessageCacheDto.fromResponse(dto);
-
-            chatRedisService.saveToRedis(cacheDto);
-        });
-
-        return mongoMessages.stream().map(ChatMessageRes::fromEntity).toList();
-    }
+//    /**
+//     * 메시지 조회 (Look-Aside)
+//     */
+//    public List<ChatMessageRes> getMessages(Long roomId, int size) {
+//        // 1) Redis 캐시 조회
+//        List<ChatMessageRes> cachedMessages = chatRedisService.getMessages(roomId, size);
+//        if (!cachedMessages.isEmpty()) {
+//            return cachedMessages;
+//        }
+//
+//        // 2) Redis에 없으면 Mongo 조회
+//        List<Message> mongoMessages = chatMongoService.getMessages(roomId, LocalDateTime.now(), size);
+//
+//        // 3) Mongo 결과 Redis 캐싱
+//        mongoMessages.forEach(m -> {
+//            ChatMessageRes dto = ChatMessageRes.fromEntity(m);
+//
+//            ChatMessageCacheDto cacheDto = ChatMessageCacheDto.fromResponse(dto);
+//
+//            chatRedisService.saveToRedis(cacheDto);
+//        });
+//
+//        return mongoMessages.stream().map(ChatMessageRes::fromEntity).toList();
+//    }
 
 //    public void handleMessage(ChatMessageDto messageDto) {
 //        switch (messageDto.getType()) {
@@ -118,6 +113,7 @@ public class ChatMessageHandlerService {
 //        }
 //    }
 //
+
 //    private void handleEnter(ChatMessageDto messageDto) {
 //        User user = userRepository.findById(messageDto.getSenderId())
 //                .orElseThrow(() -> new BusinessException(Code.MEMBER_NOT_FOUND));
