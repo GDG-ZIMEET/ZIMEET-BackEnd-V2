@@ -107,6 +107,9 @@ jobs:
           script: |
             cd /home/ubuntu/ZIMEET-backend
             
+            chmod +x ./blue-green-deploy.sh
+            ./blue-green-deploy.sh
+            
             git fetch origin
             git reset --hard origin/main
             
