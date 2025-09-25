@@ -1,7 +1,7 @@
 # [사용법]
 # 컨테이너 재시작
-# docker-compose -f docker-compose.dev.yml -f docker-compose.kafka-rabbitmq.yml down
-# docker-compose -f docker-compose.dev.yml -f docker-compose.kafka-rabbitmq.yml up -d --build
+# docker-compose -f docker-compose.dev.yml -f docker-compose.worker-mq.yml down
+# docker-compose -f docker-compose.dev.yml -f docker-compose.worker-mq.yml up -d --build
 services:
   mysql:
     image: mysql:8.0
