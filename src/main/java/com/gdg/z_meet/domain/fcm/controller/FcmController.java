@@ -1,7 +1,7 @@
 package com.gdg.z_meet.domain.fcm.controller;
 
-import com.gdg.z_meet.domain.fcm.dto.FcmBroadcastReq;
-import com.gdg.z_meet.domain.fcm.dto.FcmTestReq;
+import com.gdg.z_meet.domain.fcm.dto.FcmBroadcastRequest;
+import com.gdg.z_meet.domain.fcm.dto.FcmTestRequest;
 import com.gdg.z_meet.domain.fcm.service.token.FcmTokenService;
 import com.gdg.z_meet.domain.fcm.service.core.FcmMessageService;
 import com.gdg.z_meet.domain.user.dto.UserReq;
@@ -49,14 +49,14 @@ public class FcmController {
 
     @Operation(summary = "FCM 전체 공지용 메시지를 발송 API", description = "제목과 본문을 받아 모든 사용자에게 FCM 을 보냅니다.")
     @PostMapping("/broadcast")
-    public Response<Void> broadcastMessage(@RequestBody FcmBroadcastReq req) {
+    public Response<Void> broadcastMessage(@RequestBody FcmBroadcastRequest req) {
         fcmMessageService.broadcastToAllUsers(req.getTitle(), req.getBody());
         return Response.ok();
     }
 
     @Operation(summary = "FCM 테스트 API", description = "테스트용 API 입니다.")
     @PostMapping("/test")
-    public Response<Void> testFCM(@AuthUser Long userId, @RequestBody FcmTestReq req) {
+    public Response<Void> testFCM(@AuthUser Long userId, @RequestBody FcmTestRequest req) {
         fcmMessageService.testFcmService(userId, req.getFcmToken());
         return Response.ok();
     }
