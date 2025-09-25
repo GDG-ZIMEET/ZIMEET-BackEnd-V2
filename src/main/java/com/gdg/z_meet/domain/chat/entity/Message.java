@@ -1,14 +1,15 @@
 package com.gdg.z_meet.domain.chat.entity;
 
+import com.gdg.z_meet.domain.chat.dto.ChatMessageRes;
 import lombok.*;
 
-import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Document(collection = "messages")
 @Getter
@@ -27,8 +28,8 @@ public class Message {
     private String content;
     private Boolean isRead;
 
-    private String userId;
-    private String chatRoomId;
+    private Long userId;
+    private Long chatRoomId;
 
     @Field("createdAt")
     private LocalDateTime createdAt;
@@ -36,4 +37,15 @@ public class Message {
     @Field("updatedAt")
     private LocalDateTime updatedAt;
 
+    public static Message of(ChatMessageRes dto) {
+        return Message.builder()
+                .messageId(dto.getId() != null ? dto.getId() : UUID.randomUUID().toString())
+                .content(dto.getContent())
+                .isRead(false)
+                .userId(dto.getSenderId())
+                .chatRoomId(dto.getRoomId())
+                .createdAt(dto.getSendAt() != null ? dto.getSendAt() : LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+    }
 }

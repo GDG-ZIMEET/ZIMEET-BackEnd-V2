@@ -197,6 +197,24 @@ public class JwtUtil {
         }
     }
 
+    //websocket 검증용 메서드
+    public boolean validateToken(String jwtToken) {
+        try {
+            if (jwtToken == null || jwtToken.trim().isEmpty()) {
+                return false;
+            }
+            String token = extractTokenFromHeader(jwtToken);
+            if (token == null || token.trim().isEmpty()) {
+                return false;
+            }
+            Claims claims = jwtParser.parseClaimsJws(token).getBody();
+            return !claims.getExpiration().before(new Date());
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+
     public Long extractUserIdFromToken(String token) {
         String availableToken = extractTokenFromHeader(token);
         return getUserIdFromToken(availableToken);

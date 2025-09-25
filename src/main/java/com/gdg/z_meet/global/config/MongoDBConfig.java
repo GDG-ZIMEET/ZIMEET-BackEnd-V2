@@ -4,7 +4,6 @@ import com.mongodb.client.MongoClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import com.mongodb.client.MongoClients;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
@@ -12,7 +11,7 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 // MongoDB 리포지토리만 활성화
 @Configuration
 @EnableMongoRepositories(basePackages = "com.gdg.z_meet.domain.chat.repository.mongo")
-public class MongoConfig {
+public class MongoDBConfig {
 
     @Value("${spring.data.mongodb.host}")
     private String mongoHost;
@@ -22,6 +21,10 @@ public class MongoConfig {
 
     @Value("${spring.data.mongodb.database}")
     private String databaseName;
+
+//    @Autowired
+//    @Lazy
+//    private MappingMongoConverter mappingMongoConverter;
 
     @Bean
     public MongoClient mongoClient() {
@@ -33,4 +36,9 @@ public class MongoConfig {
     public MongoTemplate mongoTemplate() {
         return new MongoTemplate(mongoClient(), databaseName);
     }
+
+//    @Override
+//    public void afterPropertiesSet() throws Exception {
+//        mappingMongoConverter.setTypeMapper(new DefaultMongoTypeMapper(null));
+//    }
 }
