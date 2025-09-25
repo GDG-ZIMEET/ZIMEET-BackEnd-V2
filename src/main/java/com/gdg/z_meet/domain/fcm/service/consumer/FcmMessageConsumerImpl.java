@@ -51,6 +51,7 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
         log.info("FCM 메시지 처리 시작: messageId={}, type={}", 
                 fcmMessage.getMessageId(), fcmMessage.getType());
 
+
         try {
             switch (fcmMessage.getType()) {
                 case BROADCAST -> processBroadcastMessage(fcmMessage);
