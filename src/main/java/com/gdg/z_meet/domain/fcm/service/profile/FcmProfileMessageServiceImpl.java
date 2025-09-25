@@ -25,8 +25,10 @@ public class FcmProfileMessageServiceImpl implements FcmProfileMessageService {
     private final UserProfileRepository userProfileRepository;
     private final TeamRepository teamRepository;
 
+    /**
+     *  프로필 조회 API 호출 시 실행
+     */
     @Override
-    // 프로필 조회 API 호출 시 실행되어야
     public void messagingProfileViewOneOneUsers(List<UserProfile> profiles) {
         Map<Integer, String> messageTitles = new TreeMap<>(Map.of(
                 10, "🥳 내 프로필을 10명이나 봤어요! 🎉 인기 폭발 시작이에요!",
