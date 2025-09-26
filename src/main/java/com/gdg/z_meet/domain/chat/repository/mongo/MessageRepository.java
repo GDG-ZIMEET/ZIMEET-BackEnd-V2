@@ -19,7 +19,7 @@ public interface MessageRepository extends MongoRepository<Message, String> {
     @Query(value = "{ 'chatRoomId': ?0 }", fields = "{ 'messageId': 1 }")
     List<Message> findMessageIdOnlyByChatRoomId(String chatRoomId);
 
-    List<Message> findByChatRoomIdAndCreatedAtBefore(String chatRoomId, Date createdAt, Pageable pageable);
+    List<Message> findByChatRoomIdAndCreatedAtBefore(Long chatRoomId, Date createdAt, Pageable pageable);
   
   
     List<Message> findByMessageIdIn(Collection<String> messageIds);

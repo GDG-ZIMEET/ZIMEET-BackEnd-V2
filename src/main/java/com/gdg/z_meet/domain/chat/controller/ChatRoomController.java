@@ -24,7 +24,7 @@ public class ChatRoomController {
 
     private final ChatRoomQueryService chatRoomQueryService;
     private final ChatRoomCommandService chatRoomCommandService;
-    private final MessageQueryService messageQueryService;
+    private final ChatMessageQueryService chatMessageQueryService;
 
     @Operation(summary = "채팅방 삭제", description = "기존 채팅방을 삭제합니다.")
     @DeleteMapping("/{roomId}")
@@ -93,7 +93,7 @@ public class ChatRoomController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime lastMessageTime,
             @RequestParam(defaultValue = "20") int size // 페이지 크기 (기본값: 20)
     ) {
-        List<ChatMessageRes> messages = messageQueryService.getMessagesByChatRoom(roomId,userId, lastMessageTime, size);
+        List<ChatMessageRes> messages = chatMessageQueryService.getMessagesByChatRoom(roomId,userId, lastMessageTime, size);
         return ResponseEntity.ok(messages);
     }
 }
