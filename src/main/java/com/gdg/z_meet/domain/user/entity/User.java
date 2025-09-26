@@ -14,6 +14,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 
 @Entity
+@Table(name = "users")  // H2에서 user는 예약어이므로 users로 변경
 @Getter
 @Builder
 @NoArgsConstructor
@@ -95,9 +96,17 @@ public class User extends BaseEntity implements UserDetails {
         this.password = password;
     }
 
-    public void setPushAgree(boolean pushAgree) { this.pushAgree = pushAgree;}
+    public boolean isPushAgree() {
+        return pushAgree;
+    }
 
-    public void setFcmSendTwoTwo(boolean fcmSendTwoTwo) {this.fcmSendTwoTwo = fcmSendTwoTwo;}
+    public void setPushAgree(boolean pushAgree) { 
+        this.pushAgree = pushAgree;
+    }
+
+    public void setFcmSendTwoTwo(boolean fcmSendTwoTwo) {
+        this.fcmSendTwoTwo = fcmSendTwoTwo;
+    }
 
     public void setFcmToken(FcmToken fcmToken) {
         this.fcmToken = fcmToken;
@@ -105,5 +114,4 @@ public class User extends BaseEntity implements UserDetails {
             fcmToken.setUser(this);
         }
     }
-
 }
