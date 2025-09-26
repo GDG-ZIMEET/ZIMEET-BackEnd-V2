@@ -49,8 +49,6 @@ class FcmControllerTest {
     @MockBean
     private FcmMessageService fcmMessageService;
 
-    @MockBean
-    private JwtUtil jwtUtil;
 
     @Configuration
     static class TestConfig implements WebMvcConfigurer {
