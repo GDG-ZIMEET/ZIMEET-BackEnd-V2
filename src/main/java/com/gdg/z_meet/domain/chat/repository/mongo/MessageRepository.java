@@ -11,13 +11,13 @@ import java.util.List;
 
 public interface MessageRepository extends MongoRepository<Message, String> {
     // MongoDB에서 String 타입의 chatRoomId를 받아 메시지를 조회
-    List<Message> findByChatRoomId(String chatRoomId, Pageable pageable);
-    List<Message> findByUserId(String userId);
-    void deleteByUserId(String userId);
+    List<Message> findByChatRoomId(Long chatRoomId, Pageable pageable);
+    List<Message> findByUserId(Long userId);
+    void deleteByUserId(Long userId);
 
     // MongoMessageRepository.java
     @Query(value = "{ 'chatRoomId': ?0 }", fields = "{ 'messageId': 1 }")
-    List<Message> findMessageIdOnlyByChatRoomId(String chatRoomId);
+    List<Message> findMessageIdOnlyByChatRoomId(Long chatRoomId);
 
     List<Message> findByChatRoomIdAndCreatedAtBefore(Long chatRoomId, Date createdAt, Pageable pageable);
   
