@@ -1,8 +1,9 @@
-package com.gdg.z_meet.domain.fcm.service.consumer;
+package com.gdg.z_meet.domain.fcm.unit.service.consumer;
 
 import com.gdg.z_meet.domain.fcm.dto.FcmMessageRequest;
 import com.gdg.z_meet.domain.fcm.entity.FcmToken;
 import com.gdg.z_meet.domain.fcm.repository.FcmTokenRepository;
+import com.gdg.z_meet.domain.fcm.service.consumer.FcmMessageConsumerImpl;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.google.firebase.ErrorCode;
 import com.google.firebase.messaging.FirebaseMessaging;

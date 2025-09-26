@@ -1,6 +1,7 @@
-package com.gdg.z_meet.domain.fcm.service.producer;
+package com.gdg.z_meet.domain.fcm.unit.service.producer;
 
 import com.gdg.z_meet.domain.fcm.dto.FcmMessageRequest;
+import com.gdg.z_meet.domain.fcm.service.producer.FcmMessageProducerImpl;
 import com.gdg.z_meet.global.config.RabbitMqConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

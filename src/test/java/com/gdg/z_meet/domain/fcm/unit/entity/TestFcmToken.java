@@ -1,4 +1,4 @@
-package com.gdg.z_meet.domain.fcm.entity;
+package com.gdg.z_meet.domain.fcm.unit.entity;
 
 import jakarta.persistence.*;
 

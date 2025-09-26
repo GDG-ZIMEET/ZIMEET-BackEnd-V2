@@ -1,4 +1,4 @@
-package com.gdg.z_meet.domain.fcm.config;
+package com.gdg.z_meet.domain.fcm.unit.config;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
