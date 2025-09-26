@@ -29,10 +29,10 @@ public class ChatRedisService {
     private static final int MAX_REDIS_MESSAGES = 300;
 
     // 메시지 발행 + Redis 저장 (Write-Through에서 Mongo 저장은 외부에서 함께 수행)
-    public void publishAndCache(Long roomId, ChatMessageReq messageDto) {
-        redisPublisher.publishToRoom(roomId, messageDto);
+    public void publishAndCache(Long roomId, Long userId, ChatMessageReq messageDto) {
+        ChatMessageCacheDto cacheDto = ChatMessageCacheDto.fromReq(roomId, userId, messageDto);
 
-        ChatMessageCacheDto cacheDto = ChatMessageCacheDto.fromReq(messageDto);
+        redisPublisher.publishToRoom(roomId, cacheDto);
 
         saveToRedis(roomId, cacheDto);
     }
