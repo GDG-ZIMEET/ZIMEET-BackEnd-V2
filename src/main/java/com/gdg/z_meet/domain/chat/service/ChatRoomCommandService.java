@@ -75,7 +75,7 @@ public class ChatRoomCommandService {
         Pageable pageable = PageRequest.of(0, batchSize);
 
         while (true) {
-            List<Message> messages = messageRepository.findByChatRoomId(String.valueOf(chatRoomId), pageable);
+            List<Message> messages = messageRepository.findByChatRoomId(chatRoomId, pageable);
             if (messages.isEmpty()) {
                 break; // 더 이상 삭제할 메시지가 없으면 종료
             }
@@ -103,7 +103,7 @@ public class ChatRoomCommandService {
 
     }
 
-    // 팀으로 채팅방 추가
+    // 팀으로 채팅방 추가 (팀 채팅)
     @Transactional
     public ChatRoomDto.resultChatRoomDto addTeamJoinChat(ChatRoomDto.hiDto hiDto) {
         List<Long> teamIds = Arrays.asList(hiDto.getFromId(), hiDto.getToId());
@@ -137,7 +137,7 @@ public class ChatRoomCommandService {
                 .build();
     }
 
-    // 사용자 채팅방 추가
+    // 사용자 채팅방 추가 (1:1 채팅)
     @Transactional
     public ChatRoomDto.resultChatRoomDto addUserJoinChat(ChatRoomDto.hiDto hiDto) {
         List<Long> userIds = Arrays.asList(hiDto.getFromId(), hiDto.getToId());
@@ -180,6 +180,7 @@ public class ChatRoomCommandService {
         return redisTemplate.opsForValue().increment(key);
     }
 
+    // 랜덤 매칭 채팅방(4인용) 생성.
     public ChatRoomDto.resultChatRoomDto addRandomUserJoinChat(List<Long> userIds){
         if(userIds.size() != 4)
             throw new BusinessException(Code.RANDOM_MEETING_USER_COUNT);
@@ -204,7 +205,7 @@ public class ChatRoomCommandService {
                 .build();
     }
 
-    // 사용자 채팅방 추가
+    // 사용자들을 채팅방에 참여시키는 메서드
     @Transactional
     public void addUserToChatRoom(ChatRoom chatRoom, List<User> users){
         Long chatRoomId = chatRoom.getId();
@@ -238,6 +239,7 @@ public class ChatRoomCommandService {
         }
     }
 
+    // 특정 팀을 채팅방에 추가하는 메서드
     @Transactional
     public void addTeamToChatRoom(ChatRoom chatRoom, Team team, String teamName){
 
@@ -259,7 +261,7 @@ public class ChatRoomCommandService {
         addUserToChatRoom(chatRoom, users);
     }
 
-    // 사용자 제거
+    // 특정 사용자를 채팅방에서 내보내기
     @Transactional
     public void removeUserFromChatRoom(Long chatRoomId, Long userId) {
 
