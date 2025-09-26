@@ -52,13 +52,14 @@ public class StompHandler implements ChannelInterceptor {
             }
 
             // 토큰 유효성 검증 성공 시, 사용자 정보 추출 후 Principal 설정
-            String studentNumber = jwtUtil.getStudentNumberFromToken(token);
-            accessor.setUser(() -> studentNumber); // Principal 설정
+//            String studentNumber = jwtUtil.getStudentNumberFromToken(token);
+            Long userId = jwtUtil.getUserIdFromToken(token);
+            accessor.setUser(() -> String.valueOf(userId)); // Principal 설정
 
             //사용자 정보를 websocket 연결 컨텍스트에 저장 (이후 subscribe, send 시에도 꺼내 쓸 수 있게)
             //accessor.getSessionAttributes().put("studentNumber", studentNumber);
 
-            log.info("stomp 연결 성공: {}", studentNumber);
+            log.info("stomp 연결 성공: {}", userId);
         }
 
         if (StompCommand.SUBSCRIBE.equals(command)) {
@@ -78,7 +79,7 @@ public class StompHandler implements ChannelInterceptor {
 //                return null;
 //            }
 
-            String studentNumber = accessor.getUser().getName(); // CONNECT 시 저장한 Principal (학번)
+            String userId = accessor.getUser().getName(); // CONNECT 시 저장한 Principal (userId)
             String destination = accessor.getDestination();  // 예: /sub/chat/room/3
             Long chatRoomId = extractRoomIdFromDestination(destination);
 
@@ -90,7 +91,7 @@ public class StompHandler implements ChannelInterceptor {
 //                return null;  //예외 반환시 웹소켓 연결 해제되는 현상 방지위해 null 반환
 //            }
 
-            log.info("채팅방 구독 허용 - studentNumber: {}, roomId: {}", studentNumber, chatRoomId);
+            log.info("채팅방 구독 허용 - userId: {}, roomId: {}", userId, chatRoomId);
         }
 
         if (StompCommand.DISCONNECT.equals(command)) {
