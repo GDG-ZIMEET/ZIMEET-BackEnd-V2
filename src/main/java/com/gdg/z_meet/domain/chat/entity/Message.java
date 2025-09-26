@@ -1,6 +1,7 @@
 package com.gdg.z_meet.domain.chat.entity;
 
 import com.gdg.z_meet.domain.chat.dto.ChatMessageRes;
+import com.gdg.z_meet.domain.chat.entity.status.MessageType;
 import lombok.*;
 
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -25,6 +26,8 @@ public class Message {
     @Indexed(unique = true)
     private String messageId;     // UUID
 
+    private MessageType type;
+
     private String content;
     private Boolean isRead;
 
@@ -40,6 +43,7 @@ public class Message {
     public static Message of(ChatMessageRes dto) {
         return Message.builder()
                 .messageId(dto.getId() != null ? dto.getId() : UUID.randomUUID().toString())
+                .type(dto.getType())
                 .content(dto.getContent())
                 .isRead(false)
                 .userId(dto.getSenderId())

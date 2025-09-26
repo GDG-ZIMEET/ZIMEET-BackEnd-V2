@@ -25,11 +25,11 @@ public class ChatMessageCacheDto implements Serializable {
     private LocalDateTime sendAt;
 
     // Request → Cache 변환
-    public static ChatMessageCacheDto fromReq(ChatMessageReq request) {
+    public static ChatMessageCacheDto fromReq(Long roomId, Long userId, ChatMessageReq request) {
         return new ChatMessageCacheDto(
                 request.getType(),
-                request.getRoomId(),
-                request.getSenderId(),
+                roomId,
+                userId,
                 request.getContent(),
                 LocalDateTime.now()
         );

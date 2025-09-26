@@ -157,6 +157,7 @@ public class ChatRoomQueryService {
         return userTeamChatRoom.getName();
     }
 
+    //채팅방 참여자들의 프로필 목록 반환.
     @Transactional
     public List<ChatRoomDto.UserProfileDto> getUserProfilesByChatRoomId(Long userId, Long chatRoomId, boolean filterByGender) {
         // 현재 사용자의 성별 조회
@@ -199,7 +200,7 @@ public class ChatRoomQueryService {
                 .collect(Collectors.toList());
     }
 
-    //채팅방에 있는 사용자 조회
+    //채팅방에 있는 사용자 목록 반환
     @Transactional
     public List<ChatRoomDto.chatRoomUserList> getUserByRoomId(Long userId, Long roomId) {
         // 사용자가 해당 채팅방에 존재하는지 확인
@@ -221,6 +222,7 @@ public class ChatRoomQueryService {
 
     }
 
+    // 팀 채팅방 참여자 목록 반환
     private List<ChatRoomDto.chatRoomUserList> getTeamChatRoomUserList(Long userId, Long roomId) {
         List<ChatRoomDto.UserProfileDto> userProfileDtos = getUserProfilesByChatRoomId(userId, roomId, false);
 
@@ -279,6 +281,7 @@ public class ChatRoomQueryService {
         return teamUserLists;
     }
 
+    // 랜덤 채팅방 참여자 목록 반환
     private List<ChatRoomDto.chatRoomUserList> getRandomChatRoomUserList(Long userId, Long roomId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(Code.MEMBER_NOT_FOUND));

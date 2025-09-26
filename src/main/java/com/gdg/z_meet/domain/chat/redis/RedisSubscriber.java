@@ -1,6 +1,7 @@
 package com.gdg.z_meet.domain.chat.redis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gdg.z_meet.domain.chat.dto.ChatMessageCacheDto;
 import com.gdg.z_meet.domain.chat.dto.ChatMessageReq;
 import com.gdg.z_meet.domain.chat.dto.ChatMessageRes;
 import com.gdg.z_meet.domain.chat.service.ChatMessageHandlerService;
@@ -28,7 +29,7 @@ public class RedisSubscriber implements MessageListener {
         try {
             String msgBody = new String(message.getBody(), StandardCharsets.UTF_8);
             String channel = new String(message.getChannel(), StandardCharsets.UTF_8);
-            ChatMessageReq chatMessageReq = objectMapper.readValue(msgBody, ChatMessageReq.class);
+            ChatMessageCacheDto chatMessage = objectMapper.readValue(msgBody, ChatMessageCacheDto.class);
             
             log.info("Redis 메시지 수신 - Channel: {}, Message: {}", channel, msgBody);
             
@@ -38,7 +39,7 @@ public class RedisSubscriber implements MessageListener {
 //                chatMessageHandlerService.handleMessage(chatMessageDto);
 //            }
 
-            messagingTemplate.convertAndSend("/topic/" + chatMessageReq.getRoomId(), chatMessageReq);
+            messagingTemplate.convertAndSend("/topic/" + chatMessage.getRoomId(), chatMessage);
             
         } catch (Exception e) {
             log.error("Redis 구독 메시지 처리 실패", e);
