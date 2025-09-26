@@ -27,7 +27,7 @@ public class RedisSubscriber implements MessageListener {
     public void onMessage(Message message, byte[] pattern) {
         try {
             String msgBody = new String(message.getBody(), StandardCharsets.UTF_8);
-            String channel = new String(pattern, StandardCharsets.UTF_8);
+            String channel = new String(message.getChannel(), StandardCharsets.UTF_8);
             ChatMessageReq chatMessageReq = objectMapper.readValue(msgBody, ChatMessageReq.class);
             
             log.info("Redis 메시지 수신 - Channel: {}, Message: {}", channel, msgBody);
