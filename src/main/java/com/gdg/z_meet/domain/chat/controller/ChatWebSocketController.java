@@ -25,19 +25,24 @@ public class ChatWebSocketController {
                               Message<?> message) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
 
-        String studentNumber = null;
-        if (accessor.getUser() != null) {
-            studentNumber = accessor.getUser().getName();
-        } else if (accessor.getSessionAttributes() != null) {
-            studentNumber = (String) accessor.getSessionAttributes().get("user");
-        }
+        String studentNumber = (String) accessor.getSessionAttributes().get("studentNumber");
 
-        if (studentNumber == null) {
+        if(studentNumber == null) {
             throw new RuntimeException("사용자 정보 없음");
         }
 
+//        String studentNumber = null;
+//        if (accessor.getUser() != null) {
+//            studentNumber = accessor.getUser().getName();
+//        } else if (accessor.getSessionAttributes() != null) {
+//            studentNumber = (String) accessor.getSessionAttributes().get("user");
+//        }
+//
+//        if (studentNumber == null) {
+//            throw new RuntimeException("사용자 정보 없음");
+//        }
+
         // 채팅 메시지 전송
         chatMessageHandlerService.sendMessage(chatMessageReq);
-//        chatMessageService.sendMessage(roomId, chatMessageDto);
     }
 }

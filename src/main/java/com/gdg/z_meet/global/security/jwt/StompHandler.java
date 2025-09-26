@@ -51,14 +51,14 @@ public class StompHandler implements ChannelInterceptor {
             accessor.setUser(() -> studentNumber); // Principal 설정
 
             //사용자 정보를 websocket 연결 컨텍스트에 저장 (이후 subscribe, send 시에도 꺼내 쓸 수 있게)
-            accessor.getSessionAttributes().put("user", studentNumber);
+            accessor.getSessionAttributes().put("studentNumber", studentNumber);
 
             log.info("stomp 연결 성공: {}", studentNumber);
         }
 
         if (StompCommand.SUBSCRIBE.equals(command)) {
 
-            Object user = accessor.getSessionAttributes().get("user");
+            Object user = accessor.getSessionAttributes().get("studentNumber");
             if (user != null) {
                 accessor.setUser(() -> (String) user);
             } else {
@@ -78,7 +78,7 @@ public class StompHandler implements ChannelInterceptor {
 //                return null;  //예외 반환시 웹소켓 연결 해제되는 현상 방지위해 null 반환
 //            }
 
-            log.info("채팅방 구독 허용 - userEmail: {}, roomId: {}", studentNumber, chatRoomId);
+            log.info("채팅방 구독 허용 - studentNumber: {}, roomId: {}", studentNumber, chatRoomId);
         }
 
         if (StompCommand.DISCONNECT.equals(command)) {

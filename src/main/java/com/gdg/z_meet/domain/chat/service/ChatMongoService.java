@@ -57,8 +57,9 @@ public class ChatMongoService {
 
         Pageable pageable = PageRequest.of(0, size, Sort.by("createdAt").descending());
 
+        // createdAt < lastMessageTime (엄격하게 이전 메시지만 조회)
         return messageRepository.findByChatRoomIdAndCreatedAtBefore(
-                chatRoomId.toString(), utcDate, pageable
+                chatRoomId, utcDate, pageable
         );
     }
 
