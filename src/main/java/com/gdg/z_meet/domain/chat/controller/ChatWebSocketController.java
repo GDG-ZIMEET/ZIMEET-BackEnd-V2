@@ -43,6 +43,6 @@ public class ChatWebSocketController {
 //        }
 
         // 채팅 메시지 전송
-        chatMessageHandlerService.sendMessage(chatMessageReq);
+        chatMessageHandlerService.sendMessage(roomId, chatMessageReq);
     }
 }
