@@ -15,8 +15,6 @@ import java.io.Serializable;
 @Builder
 public class ChatMessageReq implements Serializable {
     private MessageType type;
-    private Long roomId;
-    private Long senderId;
     private String content;
 
 
