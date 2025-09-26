@@ -1,13 +1,13 @@
-package com.gdg.z_meet.domain.fcm.controller;
+package com.gdg.z_meet.domain.fcm.unit.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gdg.z_meet.domain.fcm.controller.FcmController;
 import com.gdg.z_meet.domain.fcm.dto.FcmBroadcastRequest;
 import com.gdg.z_meet.domain.fcm.dto.FcmTestRequest;
 import com.gdg.z_meet.domain.fcm.service.core.FcmMessageService;
 import com.gdg.z_meet.domain.fcm.service.token.FcmTokenService;
 import com.gdg.z_meet.domain.user.dto.UserReq;
 import com.gdg.z_meet.global.security.annotation.AuthUser;
-import com.gdg.z_meet.global.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;

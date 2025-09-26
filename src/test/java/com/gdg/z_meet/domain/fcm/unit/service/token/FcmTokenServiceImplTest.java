@@ -1,7 +1,8 @@
-package com.gdg.z_meet.domain.fcm.service.token;
+package com.gdg.z_meet.domain.fcm.unit.service.token;
 
 import com.gdg.z_meet.domain.fcm.entity.FcmToken;
 import com.gdg.z_meet.domain.fcm.repository.FcmTokenRepository;
+import com.gdg.z_meet.domain.fcm.service.token.FcmTokenServiceImpl;
 import com.gdg.z_meet.domain.user.dto.UserReq;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.domain.user.repository.UserRepository;

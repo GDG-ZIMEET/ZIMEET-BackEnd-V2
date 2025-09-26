@@ -1,4 +1,4 @@
-package com.gdg.z_meet.domain.fcm.repository;
+package com.gdg.z_meet.domain.fcm.unit.repository;
 
 import com.gdg.z_meet.domain.fcm.entity.FcmToken;
 import com.gdg.z_meet.domain.user.entity.User;
