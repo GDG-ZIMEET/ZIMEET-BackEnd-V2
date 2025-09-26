@@ -29,12 +29,12 @@ public class ChatRedisService {
     private static final int MAX_REDIS_MESSAGES = 300;
 
     // 메시지 발행 + Redis 저장 (Write-Through에서 Mongo 저장은 외부에서 함께 수행)
-    public void publishAndCache(ChatMessageReq messageDto) {
-        redisPublisher.publishToRoom(messageDto.getRoomId(), messageDto);
+    public void publishAndCache(Long roomId, ChatMessageReq messageDto) {
+        redisPublisher.publishToRoom(roomId, messageDto);
 
         ChatMessageCacheDto cacheDto = ChatMessageCacheDto.fromReq(messageDto);
 
-        saveToRedis(cacheDto);
+        saveToRedis(roomId, cacheDto);
     }
 
 //    // Redis에 메시지 저장
@@ -74,23 +74,23 @@ public class ChatRedisService {
 //    }
 
 
-    public void saveToRedis(ChatMessageCacheDto messageDto) {
-        String key = "chatroom:" + messageDto.getRoomId() + ":messages";
+    public void saveToRedis(Long roomId, ChatMessageCacheDto messageDto) {
+        String key = "chatroom:" + roomId + ":messages";
 
         // 메시지를 ZSet에 저장, score = timestamp (밀리초)
         double score = messageDto.getSendAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
         redisTemplate.opsForZSet().add(key, messageDto, score);
 
         // 최신 메시지 별도 저장
-        redisTemplate.opsForValue().set("chatroom:" + messageDto.getRoomId() + ":latestMessage", messageDto.getContent());
-        redisTemplate.opsForValue().set("chatroom:" + messageDto.getRoomId() + ":latestMessageTime", LocalDateTime.now().toString());
+        redisTemplate.opsForValue().set("chatroom:" + roomId + ":latestMessage", messageDto.getContent());
+        redisTemplate.opsForValue().set("chatroom:" + roomId + ":latestMessageTime", LocalDateTime.now().toString());
 
         trimMessages(key);
 
         // TTL 설정
         redisTemplate.expire(key, Duration.ofDays(7));
-        redisTemplate.expire("chatroom:" + messageDto.getRoomId() + ":latestMessage", Duration.ofDays(7));
-        redisTemplate.expire("chatroom:" + messageDto.getRoomId() + ":latestMessageTime", Duration.ofDays(7));
+        redisTemplate.expire("chatroom:" + roomId + ":latestMessage", Duration.ofDays(7));
+        redisTemplate.expire("chatroom:" + roomId + ":latestMessageTime", Duration.ofDays(7));
     }
 
     // Redis 메시지 개수 제한 (최근 MAX_REDIS_MESSAGES개만 남기기)
@@ -111,7 +111,7 @@ public class ChatRedisService {
         if (lastMessageTime == null) {
             rawMessages = redisTemplate.opsForZSet().reverseRange(key, 0, size - 1);
         } else {
-            double score = lastMessageTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            double score = lastMessageTime.atZone(ZoneId.systemDefault()).toInstant().minusMillis(1).toEpochMilli();
             rawMessages = redisTemplate.opsForZSet().reverseRangeByScore(key, Double.NEGATIVE_INFINITY, score, 0, size);
         }
 
