@@ -28,49 +28,49 @@ public class ChatMessageHandlerService {
     /**
      * 메시지 처리 엔트리포인트
      */
-    public void sendMessage(Long roomId, ChatMessageReq messageReq) {
+    public void sendMessage(Long roomId, Long userId, ChatMessageReq messageReq) {
         switch (messageReq.getType()) {
-            case ENTER -> sendEnter(roomId, messageReq);
-            case EXIT -> sendExit(roomId, messageReq);
-            case TALK -> sendTalk(roomId, messageReq);
-            default -> sendTalk(roomId, messageReq);
+            case ENTER -> sendEnter(roomId, userId, messageReq);
+            case EXIT -> sendExit(roomId, userId, messageReq);
+            case TALK -> sendTalk(roomId, userId, messageReq);
+            default -> sendTalk(roomId, userId, messageReq);
         }
     }
 
     /**
      * 채팅 메시지 (Write-Through)
      */
-    private void sendTalk(Long roomId, ChatMessageReq messageDto) {
+    private void sendTalk(Long roomId, Long userId, ChatMessageReq messageDto) {
         // 1) Redis Publish + 캐싱
-        chatRedisService.publishAndCache(roomId, messageDto);
+        chatRedisService.publishAndCache(roomId, userId, messageDto);
 
         // 2) MongoDB 저장
-        chatMongoService.saveToMongo(roomId, messageDto);
+        chatMongoService.saveToMongo(roomId, userId, messageDto);
     }
 
     /**
      * 입장 메시지
      */
-    private void sendEnter(Long roomId, ChatMessageReq messageDto) {
-        User user = userRepository.findById(messageDto.getSenderId())
+    private void sendEnter(Long roomId, Long userId, ChatMessageReq messageDto) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(Code.MEMBER_NOT_FOUND));
 
         //setType
 
-        chatRedisService.publishAndCache(roomId, messageDto);
+        chatRedisService.publishAndCache(roomId, userId, messageDto);
         chatNotificationService.notifyRoomOpen(user, roomId);
     }
 
     /**
      * 퇴장 메시지
      */
-    private void sendExit(Long roomId, ChatMessageReq messageDto) {
-        User user = userRepository.findById(messageDto.getSenderId())
+    private void sendExit(Long roomId, Long userId, ChatMessageReq messageDto) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(Code.MEMBER_NOT_FOUND));
 
         //setType
 
-        chatRedisService.publishAndCache(roomId, messageDto);
+        chatRedisService.publishAndCache(roomId, userId, messageDto);
     }
 
 
