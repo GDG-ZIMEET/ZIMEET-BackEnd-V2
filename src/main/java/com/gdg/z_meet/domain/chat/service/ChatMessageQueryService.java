@@ -115,7 +115,7 @@ public List<ChatMessageRes> getMessagesByChatRoom(
                             .orElseThrow(() -> new BusinessException(Code.MEMBER_NOT_FOUND));
                     return ChatMessageRes.builder()
                             .id(m.getMessageId())
-                            .type(MessageType.CHAT)
+                            .type(m.getType())
                             .roomId(m.getChatRoomId())
                             .senderId(m.getUserId())
                             .senderName(user.getName())
@@ -127,7 +127,7 @@ public List<ChatMessageRes> getMessagesByChatRoom(
                 .toList();
 
         // DB에서 가져온 메시지는 Redis에 캐싱
-        dbDtos.forEach(dto -> chatRedisService.saveToRedis(ChatMessageCacheDto.fromResponse(dto)));
+        dbDtos.forEach(dto -> chatRedisService.saveToRedis(chatRoomId, ChatMessageCacheDto.fromResponse(dto)));
 
         cachedMessages.addAll(dbDtos);
     }

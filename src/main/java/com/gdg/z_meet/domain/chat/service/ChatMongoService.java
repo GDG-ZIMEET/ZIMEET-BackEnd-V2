@@ -30,13 +30,14 @@ public class ChatMongoService {
 
     // Write-Through: MongoDB 저장
     @Transactional
-    public void saveToMongo(ChatMessageReq req) {
+    public void saveToMongo(Long roomId, ChatMessageReq req) {
         User user = userRepository.findById(req.getSenderId())
                 .orElseThrow(() -> new BusinessException(Code.MEMBER_NOT_FOUND));
 
         Message message = Message.builder()
                 .messageId(UUID.randomUUID().toString())
-                .chatRoomId(req.getRoomId())
+                .type(req.getType())
+                .chatRoomId(roomId)
                 .userId(user.getId())
                 .content(req.getContent())
                 .createdAt(LocalDateTime.now())
