@@ -24,12 +24,13 @@ public class ChatWebSocketController {
     public void handleMessage(@DestinationVariable Long roomId,
                               ChatMessageReq chatMessageReq,
                               Principal principal) {
+        Long userId = Long.parseLong(principal.getName());
 
         if(principal == null) {
             throw new RuntimeException("사용자 정보 없음");
         }
 
         // 채팅 메시지 전송
-        chatMessageHandlerService.sendMessage(roomId, chatMessageReq);
+        chatMessageHandlerService.sendMessage(roomId, userId, chatMessageReq);
     }
 }
