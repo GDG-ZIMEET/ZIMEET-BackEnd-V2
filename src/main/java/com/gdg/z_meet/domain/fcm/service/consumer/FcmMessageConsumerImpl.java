@@ -37,10 +37,11 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
      */
     private static final Set<String> DELETABLE_ERROR_CODES = Set.of(
             "unregistered",
-            "invalid_argument", 
-            "invalid_arguments",
+            "invalid-argument", 
+            "invalid-arguments",
             "registration-token-not-registered",
-            "messaging/invalid-registration-token"
+            "messaging/invalid-registration-token",
+            "messaging/registration-token-not-registered"
     );
 
     /**
@@ -161,16 +162,24 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
     }
 
     private void handleInvalidToken(FirebaseMessagingException e, FcmToken tokenEntity, String token, Long userId) {
-        String errorCode = e.getErrorCode() != null ? e.getErrorCode().toString() : "";
+        String errorCode = e.getErrorCode() != null ? e.getErrorCode().toString().toLowerCase() : "";
+        String errorMessage = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
         
-        if (isDeleteableErrorCode(errorCode)) {
+        // 에러 코드 또는 에러 메시지로 판단
+        if (isDeleteableErrorCode(errorCode) || isDeleteableErrorMessage(errorMessage)) {
             fcmTokenRepository.delete(tokenEntity);
-            log.warn("무효한 FCM 토큰 삭제: token={}, userId={}, errorCode={}", 
-                    maskToken(token), userId, errorCode);
+            log.warn("무효한 FCM 토큰 삭제: token={}, userId={}, errorCode={}, message={}", 
+                    maskToken(token), userId, errorCode, e.getMessage());
         }
     }
     
     private boolean isDeleteableErrorCode(String errorCode) {
-        return DELETABLE_ERROR_CODES.contains(errorCode.toLowerCase());
+        return DELETABLE_ERROR_CODES.contains(errorCode);
+    }
+    
+    private boolean isDeleteableErrorMessage(String errorMessage) {
+        return errorMessage.contains("unregistered") || 
+               errorMessage.contains("not-registered") ||
+               errorMessage.contains("invalid") && errorMessage.contains("token");
     }
 }
