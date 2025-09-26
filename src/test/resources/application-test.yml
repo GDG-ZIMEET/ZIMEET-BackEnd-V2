@@ -25,3 +25,6 @@ spring:
     exclude: 
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+firebase:
+  admin-sdk: ""  # 테스트 환경에서는 빈 값으로 설정

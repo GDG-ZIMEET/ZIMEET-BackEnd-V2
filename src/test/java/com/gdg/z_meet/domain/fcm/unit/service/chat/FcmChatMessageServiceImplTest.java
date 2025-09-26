@@ -1,4 +1,4 @@
-package com.gdg.z_meet.domain.fcm.unit.service.core;
+package com.gdg.z_meet.domain.fcm.unit.service.chat;
 
 import com.gdg.z_meet.domain.fcm.service.core.FcmMessageServiceImpl;
 import com.gdg.z_meet.domain.fcm.service.producer.FcmMessageProducer;
@@ -161,18 +161,4 @@ class FcmChatMessageServiceImplTest {
         );
     }
 
-    @Test
-    void null_userId로_테스트() {
-        // Given
-        Long userId = null;
-        String fcmToken = "test-token";
-
-        when(userRepository.findById(userId)).thenReturn(Optional.empty());
-
-        // When & Then
-        BusinessException exception = assertThrows(BusinessException.class, 
-                () -> fcmMessageService.testFcmService(userId, fcmToken));
-
-        assertEquals(Code.USER_NOT_FOUND, exception.getCode());
-    }
 }

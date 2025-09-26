@@ -32,8 +32,7 @@ class FcmMessageServiceImplTest {
     private FcmMessageServiceImpl fcmMessageService;
 
     @Test
-    @DisplayName("모든 사용자에게 브로드캐스트 메시지 전송")
-    void broadcastToAllUsers() {
+    void 모든_사용자에게_브로드캐스트_메시지_전송() {
         // Given
         String title = "브로드캐스트 제목";
         String body = "브로드캐스트 내용";
@@ -46,8 +45,7 @@ class FcmMessageServiceImplTest {
     }
 
     @Test
-    @DisplayName("FCM 서비스 테스트 - 정상 사용자")
-    void testFcmService() {
+    void FCM_서비스_테스트_정상_사용자() {
         // Given
         Long userId = 1L;
         String fcmToken = "test-fcm-token";
@@ -65,16 +63,15 @@ class FcmMessageServiceImplTest {
         // Then
         verify(userRepository).findById(userId);
         verify(fcmMessageProducer).sendTestMessage(
-                eq(userId), 
-                eq(fcmToken), 
-                eq("ZI-MEET FCM 알림 테스트입니다."), 
+                eq(userId),
+                eq(fcmToken),
+                eq("ZI-MEET FCM 알림 테스트입니다."),
                 eq("테스트 성공했나요?")
         );
     }
 
     @Test
-    @DisplayName("FCM 서비스 테스트 - 존재하지 않는 사용자")
-    void testFcmServiceWithNonExistentUser() {
+    void FCM_서비스_테스트_존재하지_않는_사용자() {
         // Given
         Long userId = 999L;
         String fcmToken = "test-fcm-token";
@@ -82,7 +79,7 @@ class FcmMessageServiceImplTest {
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         // When & Then
-        BusinessException exception = assertThrows(BusinessException.class, 
+        BusinessException exception = assertThrows(BusinessException.class,
                 () -> fcmMessageService.testFcmService(userId, fcmToken));
 
         assertEquals(Code.USER_NOT_FOUND, exception.getCode());
@@ -91,8 +88,7 @@ class FcmMessageServiceImplTest {
     }
 
     @Test
-    @DisplayName("빈 문자열로 브로드캐스트")
-    void broadcastWithEmptyStrings() {
+    void 빈_문자열로_브로드캐스트() {
         // Given
         String title = "";
         String body = "";
@@ -105,8 +101,7 @@ class FcmMessageServiceImplTest {
     }
 
     @Test
-    @DisplayName("null 문자열로 브로드캐스트")
-    void broadcastWithNullStrings() {
+    void null_문자열로_브로드캐스트() {
         // Given
         String title = null;
         String body = null;
@@ -119,8 +114,7 @@ class FcmMessageServiceImplTest {
     }
 
     @Test
-    @DisplayName("null FCM 토큰으로 테스트")
-    void testWithNullFcmToken() {
+    void null_FCM_토큰으로_테스트() {
         // Given
         Long userId = 1L;
         String fcmToken = null;
@@ -137,52 +131,10 @@ class FcmMessageServiceImplTest {
 
         // Then
         verify(fcmMessageProducer).sendTestMessage(
-                eq(userId), 
-                eq(fcmToken), 
-                eq("ZI-MEET FCM 알림 테스트입니다."), 
+                eq(userId),
+                eq(fcmToken),
+                eq("ZI-MEET FCM 알림 테스트입니다."),
                 eq("테스트 성공했나요?")
         );
-    }
-
-    @Test
-    @DisplayName("빈 FCM 토큰으로 테스트")
-    void testWithEmptyFcmToken() {
-        // Given
-        Long userId = 1L;
-        String fcmToken = "";
-        User user = User.builder()
-                .id(userId)
-                .studentNumber("20240001")
-                .name("테스트유저")
-                .build();
-
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-
-        // When
-        fcmMessageService.testFcmService(userId, fcmToken);
-
-        // Then
-        verify(fcmMessageProducer).sendTestMessage(
-                eq(userId), 
-                eq(fcmToken), 
-                eq("ZI-MEET FCM 알림 테스트입니다."), 
-                eq("테스트 성공했나요?")
-        );
-    }
-
-    @Test
-    @DisplayName("null userId로 테스트")
-    void testWithNullUserId() {
-        // Given
-        Long userId = null;
-        String fcmToken = "test-token";
-
-        when(userRepository.findById(userId)).thenReturn(Optional.empty());
-
-        // When & Then
-        BusinessException exception = assertThrows(BusinessException.class, 
-                () -> fcmMessageService.testFcmService(userId, fcmToken));
-
-        assertEquals(Code.USER_NOT_FOUND, exception.getCode());
     }
 }

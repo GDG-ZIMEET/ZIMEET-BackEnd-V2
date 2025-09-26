@@ -114,7 +114,7 @@ public class FcmMeetingMessageServiceImpl implements FcmMeetingMessageService {
         List<Long> userIds = userTeamRepository.findUserIdsByTeamId(targetTeamId);
 
         String title = "❤️우리 팀에게 하이가 도착했어요! 💌";
-        String body = "ZI밋에서 어떤 팀에게 하이가 왔는지 확인해보세요! ";
+        String body = "ZI밋에서 어떤 팀에게 하이가 왔는지 확인해보세요!";
 
         for (Long userId : userIds) {
             fcmMessageProducer.sendSingleMessage(userId, title, body);

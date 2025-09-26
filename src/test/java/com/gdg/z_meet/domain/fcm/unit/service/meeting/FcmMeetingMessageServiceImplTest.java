@@ -86,9 +86,9 @@ class FcmMeetingMessageServiceImplTest {
     }
     */
 
+
     @Test
-    @DisplayName("2:2 팀 미생성 사용자에게 알림")
-    void messagingNoneMeetingTwoTwoUsers() {
+    void 이대이_팀_미생성_사용자에게_알림() {
         // Given
         User user1 = User.builder().id(1L).fcmSendTwoTwo(false).build();
         User user2 = User.builder().id(2L).fcmSendTwoTwo(false).build();
@@ -100,16 +100,15 @@ class FcmMeetingMessageServiceImplTest {
 
         // Then
         verify(fcmMessageProducer, times(2)).sendSingleMessage(
-                any(Long.class), 
-                eq("👀 아직 2대2 팀을 만들지 않으셨네요!"), 
+                any(Long.class),
+                eq("👀 아직 2대2 팀을 만들지 않으셨네요!"),
                 eq("마음 맞는 친구와 팀을 만들어보세요. 함께하면 매칭 확률이 훨씬 높아져요 🔥")
         );
         verify(userRepository, times(2)).save(any(User.class));
     }
 
     @Test
-    @DisplayName("개별 사용자에게 하이 알림")
-    void messagingHiToUser() {
+    void 개별_사용자에게_하이_알림() {
         // Given
         Long targetUserId = 1L;
 
@@ -118,15 +117,14 @@ class FcmMeetingMessageServiceImplTest {
 
         // Then
         verify(fcmMessageProducer).sendSingleMessage(
-                eq(targetUserId), 
-                eq("❤️나에게 하이가 도착했어요! 💌"), 
+                eq(targetUserId),
+                eq("❤️나에게 하이가 도착했어요! 💌"),
                 eq("ZI밋에서 어떤 사람에게 하이가 왔는지 확인해보세요!")
         );
     }
 
     @Test
-    @DisplayName("null 사용자에게 하이 알림 - 무시")
-    void messagingHiToUserWithNull() {
+    void null_사용자에게_하이_알림_무시() {
         // Given
         Long targetUserId = null;
 
@@ -138,8 +136,7 @@ class FcmMeetingMessageServiceImplTest {
     }
 
     @Test
-    @DisplayName("팀에게 하이 알림")
-    void messagingHiToTeam() {
+    void 팀에게_하이_알림() {
         // Given
         Long targetTeamId = 1L;
         List<Long> userIds = List.of(1L, 2L, 3L);
@@ -152,15 +149,14 @@ class FcmMeetingMessageServiceImplTest {
         // Then
         verify(userTeamRepository).findUserIdsByTeamId(targetTeamId);
         verify(fcmMessageProducer, times(3)).sendSingleMessage(
-                any(Long.class), 
-                eq("❤️우리 팀에게 하이가 도착했어요! 💌"), 
-                eq("ZI밋에서 어떤 팀에게 하이가 왔는지 확인해보세요! ")
+                any(Long.class),
+                eq("❤️우리 팀에게 하이가 도착했어요! 💌"),
+                eq("ZI밋에서 어떤 팀에게 하이가 왔는지 확인해보세요!")
         );
     }
 
     @Test
-    @DisplayName("하이 미확인 개별 사용자에게 알림")
-    void messagingNotAcceptHiToUser() {
+    void 하이_미확인_개별_사용자에게_알림() {
         // Given
         List<Long> userIds = List.of(1L, 2L);
         List<MeetingResponseDTO.hiListDto> pendingHiList = List.of(
@@ -177,15 +173,14 @@ class FcmMeetingMessageServiceImplTest {
         verify(hiRepository).findUserIdsToNotGetHi();
         verify(hiQueryService, times(2)).checkHiList(any(), eq("Receive"));
         verify(fcmMessageProducer, times(2)).sendSingleMessage(
-                any(Long.class), 
-                eq("혹시 받은 하이를 잊으셨나요? 🥺"), 
+                any(Long.class),
+                eq("혹시 받은 하이를 잊으셨나요? 🥺"),
                 eq("받은 하이는 ⏰5시간 후에 사라지니 빠르게 확인해보세요!")
         );
     }
 
     @Test
-    @DisplayName("하이 미확인 팀에게 알림")
-    void messagingNotAcceptHiToTeam() {
+    void 하이_미확인_팀에게_알림() {
         // Given
         List<Long> teamIds = List.of(1L, 2L);
         List<Long> userIds = List.of(1L, 2L, 3L);
@@ -205,8 +200,8 @@ class FcmMeetingMessageServiceImplTest {
         verify(userTeamRepository).findUserIdsByTeamIds(teamIds);
         verify(hiQueryService, times(3)).checkHiList(any(), eq("Receive"));
         verify(fcmMessageProducer, times(3)).sendSingleMessage(
-                any(Long.class), 
-                eq("혹시 받은 하이를 잊으셨나요? 🥺"), 
+                any(Long.class),
+                eq("혹시 받은 하이를 잊으셨나요? 🥺"),
                 eq("받은 하이는 ⏰5시간 후에 사라지니 빠르게 확인해보세요!")
         );
     }
