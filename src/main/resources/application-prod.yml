@@ -39,9 +39,9 @@ spring:
     resources:
       static-locations: classpath:/static/, file:/static/
 
-# RabbitMQ Consumer 비활성화
+# RabbitMQ Consumer 환경변수로 제어
 api:
-  enabled: true             # API 서버 활성화
+  enabled: ${API_ENABLED:true}             # 기본값 true, 환경변수로 제어
 
   rabbitmq:
     host: rabbitmq
@@ -52,8 +52,8 @@ api:
 
     listener:
       simple:
-        enabled: false       # API 서버에서는 Consumer 비활성화
-        prefetch: 10         # (비활성화여도 기본값 정의는 가능)
+        enabled: ${RABBITMQ_LISTENER_ENABLED:false}       # 기본값 false, 환경변수로 제어
+        prefetch: 10         
         concurrency: 3
         max-concurrency: 10
         retry:
