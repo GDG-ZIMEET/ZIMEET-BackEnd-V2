@@ -110,26 +110,18 @@ jobs:
             git fetch origin
             git reset --hard origin/main
             
-            # Docker 이미지 pull
+            docker-compose -f docker-compose.prod.yml down --remove-orphans
+            docker-compose -f docker-compose.worker-mq.yml down --remove-orphans
+            
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest
             
-            # 모든 compose 파일에서 환경변수 치환
             sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest|g" docker-compose.prod.yml
             sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest|g" docker-compose.worker-mq.yml
             
-            # 기존 nginx 컨테이너 제거 (이름 충돌 방지)
-            docker rm -f nginx 2>/dev/null || true
-            
-            # 인프라 서비스만 시작 (nginx 제외)
             docker-compose -f docker-compose.prod.yml up -d redis mongodb
-            
-            # Worker 서비스 재시작
-            docker-compose -f docker-compose.worker-mq.yml down
             docker-compose -f docker-compose.worker-mq.yml up -d
             
-            # Blue-Green 배포 실행
             chmod +x ./blue-green-deploy.sh
             ./blue-green-deploy.sh
             
-            # 정리
             docker image prune -af --filter "until=24h"
