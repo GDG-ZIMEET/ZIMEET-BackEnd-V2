@@ -25,7 +25,7 @@ docker rm -f $IDLE 2>/dev/null || true
 
 # Idle 컨테이너 빌드 및 실행
 echo "[INFO] Starting $IDLE container..."
-docker-compose up -d --build $IDLE
+docker-compose -f docker-compose.prod.yml up -d $IDLE
 
 # Health check
 echo "[INFO] Checking health of $IDLE..."
@@ -39,7 +39,7 @@ for i in {1..10}; do
   fi
   if [ "$i" = 10 ]; then
     echo "[ERROR] Health check failed. Rolling back..."
-    docker-compose stop $IDLE
+    docker-compose -f docker-compose.prod.yml stop $IDLE
     exit 1
   fi
 done
@@ -60,4 +60,4 @@ echo "Switched traffic to $IDLE. Stopping $ACTIVE..."
 
 # Stop previous active container
 echo "[INFO] Stopping previous container: $ACTIVE"
-docker-compose stop $ACTIVE
+docker-compose -f docker-compose.prod.yml stop $ACTIVE

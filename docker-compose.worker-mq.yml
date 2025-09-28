@@ -22,9 +22,7 @@ services:
 
   backend-worker-1:
     container_name: backend-worker-1
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME}/zimeet:latest
     env_file:
       - .env
     environment:
@@ -44,9 +42,7 @@ services:
 
   backend-worker-2:
     container_name: backend-worker-2
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME}/zimeet:latest
     env_file:
       - .env
     environment:
