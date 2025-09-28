@@ -41,7 +41,7 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - MYSQL_USER=${PROD_DB_USERNAME}
       - MYSQL_PASSWORD=${PROD_DB_PASSWORD}
-      - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC&sslMode=REQUIRED&allowPublicKeyRetrieval=true
+      - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC&sslMode=PREFERRED&allowPublicKeyRetrieval=true
     networks:
       - zimeet_network
     dns:
@@ -65,7 +65,7 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - MYSQL_USER=${PROD_DB_USERNAME}
       - MYSQL_PASSWORD=${PROD_DB_PASSWORD}
-      - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC&sslMode=REQUIRED&allowPublicKeyRetrieval=true
+      - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC&sslMode=PREFERRED&allowPublicKeyRetrieval=true
     networks:
       - zimeet_network
     dns:
