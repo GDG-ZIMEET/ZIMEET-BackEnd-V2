@@ -110,6 +110,23 @@ jobs:
             git fetch origin
             git reset --hard origin/main
             
+            sleep 2
+            
+            if [ ! -f "docker-compose.prod.yml" ]; then
+              echo "Error: docker-compose.prod.yml not found"
+              exit 1
+            fi
+            
+            if [ ! -f "docker-compose.worker-mq.yml" ]; then
+              echo "Error: docker-compose.worker-mq.yml not found"
+              exit 1
+            fi
+            
+            if [ ! -f "blue-green-deploy.sh" ]; then
+              echo "Error: blue-green-deploy.sh not found"
+              exit 1
+            fi
+            
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest
             
             sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest|g" docker-compose.prod.yml
