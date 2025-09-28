@@ -44,6 +44,9 @@ services:
       - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC
     networks:
       - zimeet_network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/api/health" ]
       interval: 30s
@@ -65,6 +68,9 @@ services:
       - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC
     networks:
       - zimeet_network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/api/health" ]
       interval: 30s

@@ -110,53 +110,21 @@ jobs:
             git fetch origin
             git reset --hard origin/main
             
-            # Worker와 MQ 컨테이너 먼저 정리
             docker-compose -f docker-compose.worker-mq.yml down --remove-orphans
             
-            # Backend 컨테이너만 정리 (mongodb, redis 유지)
             docker stop backend-blue backend-green 2>/dev/null || true
             docker rm backend-blue backend-green 2>/dev/null || true
             
-            # 기존 mongodb1 컨테이너가 있으면 제거하지 않고 재사용
-            # 신규 이미지 pull
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest
             
             # compose 파일의 이미지 경로 수정
             sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest|g" docker-compose.prod.yml
             sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest|g" docker-compose.worker-mq.yml
             
-            # Redis, MongoDB 먼저 시작 (이미 실행중이면 skip됨)
             docker-compose -f docker-compose.prod.yml up -d redis mongodb
-            
-            # 의존성 서비스들이 healthy 상태 될 때까지 대기
-            echo "Waiting for Redis and MongoDB to be healthy..."
-            for i in {1..30}; do
-              if docker ps --filter "name=redis1" --filter "health=healthy" -q | grep -q . && \
-                 docker ps --filter "name=mongodb1" --filter "health=healthy" -q | grep -q .; then
-                echo "Redis and MongoDB are healthy"
-                break
-              fi
-              echo "Waiting... ($i/30)"
-              sleep 10
-            done
-            
-            # Worker와 MQ 시작
             docker-compose -f docker-compose.worker-mq.yml up -d
             
-            # RabbitMQ healthy 상태 확인
-            echo "Waiting for RabbitMQ to be healthy..."
-            for i in {1..20}; do
-              if docker ps --filter "name=rabbitmq" --filter "health=healthy" -q | grep -q .; then
-                echo "RabbitMQ is healthy"
-                break
-              fi
-              echo "Waiting for RabbitMQ... ($i/20)"
-              sleep 10
-            done
-            
-            # Blue-Green 배포 실행
             chmod +x ./blue-green-deploy.sh
             ./blue-green-deploy.sh
             
-            # 사용하지 않는 이미지 정리
             docker image prune -af --filter "until=24h"
