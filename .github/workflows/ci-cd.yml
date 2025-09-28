@@ -114,6 +114,8 @@ jobs:
             
             sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest|g" docker-compose.prod.yml
             
+            docker-compose -f docker-compose.prod.yml up -d redis mongodb nginx
+            
             docker-compose -f docker-compose.worker-mq.yml down
             docker-compose -f docker-compose.worker-mq.yml up -d
             
