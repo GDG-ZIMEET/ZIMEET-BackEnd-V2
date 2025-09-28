@@ -113,6 +113,9 @@ jobs:
             docker-compose -f docker-compose.prod.yml down --remove-orphans
             docker-compose -f docker-compose.worker-mq.yml down --remove-orphans
             
+            docker container prune -f
+            docker network prune -f
+            
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest
             
             sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest|g" docker-compose.prod.yml
