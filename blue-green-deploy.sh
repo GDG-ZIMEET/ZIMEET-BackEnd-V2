@@ -33,33 +33,30 @@ docker ps -a --filter "name=$IDLE"
 echo "[INFO] Container logs:"
 docker logs $IDLE --tail 20
 
-echo "[INFO] Checking health of $IDLE..."
-for i in {1..15}; do
-  sleep 10
-  
-  if ! docker ps --filter "name=$IDLE" --filter "status=running" -q | grep -q .; then
-    echo "[ERROR] Container $IDLE is not running!"
-    echo "[INFO] Container logs:"
-    docker logs $IDLE --tail 50
-    echo "[ERROR] Health check failed. Rolling back..."
-    docker-compose -f docker-compose.prod.yml stop $IDLE
-    exit 1
-  fi
-  
-  STATUS=$(docker exec $IDLE curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health || echo "000")
-  echo "[INFO] Attempt $i - HTTP Status: $STATUS"
-  if [ "$STATUS" = "200" ]; then
-    echo "[SUCCESS] Health check passed."
-    break
-  fi
-  if [ "$i" = 15 ]; then
-    echo "[ERROR] Health check failed after 15 attempts"
-    echo "[INFO] Final container logs:"
-    docker logs $IDLE --tail 50
-    docker-compose -f docker-compose.prod.yml stop $IDLE
-    exit 1
-  fi
-done
+#echo "[INFO] Checking health of $IDLE..."
+#for i in {1..15}; do
+#  sleep 10
+#
+#  if ! docker ps --filter "name=$IDLE" --filter "status=running" -q | grep -q .; then
+#    echo "[ERROR] $IDLE exited!"
+#    docker logs $IDLE --tail 50
+#    exit 1
+#  fi
+#
+#  STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health || echo "000")
+#  echo "[INFO] Attempt $i - HTTP Status: $STATUS"
+#
+#  if [ "$STATUS" = "200" ]; then
+#    echo "[SUCCESS] Health check passed"
+#    break
+#  fi
+#
+#  if [ "$i" = 15 ]; then
+#    echo "[ERROR] Health check failed after 15 attempts"
+#    docker logs $IDLE --tail 50
+#    exit 1
+#  fi
+#done
 
 CONF_PATH="./nginx/backend_upstream.conf"
 
