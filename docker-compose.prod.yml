@@ -32,9 +32,7 @@ services:
 
   backend-blue:
     container_name: backend-blue
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME}/zimeet:latest
     env_file:
       - .env
     expose:
@@ -55,9 +53,7 @@ services:
 
   backend-green:
     container_name: backend-green
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME}/zimeet:latest
     env_file:
       - .env
     expose:
