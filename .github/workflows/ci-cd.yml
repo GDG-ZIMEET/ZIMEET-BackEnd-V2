@@ -112,9 +112,6 @@ jobs:
             
             docker-compose -f docker-compose.worker-mq.yml down --remove-orphans
             
-            docker stop backend-blue backend-green 2>/dev/null || true
-            docker rm backend-blue backend-green 2>/dev/null || true
-            
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest
             
             # compose 파일의 이미지 경로 수정
