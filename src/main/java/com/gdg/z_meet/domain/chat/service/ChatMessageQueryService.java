@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -84,55 +85,86 @@ public List<ChatMessageRes> getMessagesByChatRoom(
         LocalDateTime lastMessageTime,
         int size
 ) {
-
-    // 채팅방 참여 여부 검증
-//    if (!joinChatRepository.existsByUserIdAndChatRoomIdAndStatusActive(userId, chatRoomId)) {
-//        throw new BusinessException(Code.JOINCHAT_NOT_FOUND);
-//    }
+    // 1) 채팅방 참여 여부 검증
+    if (!joinChatRepository.existsByUserIdAndChatRoomIdAndStatusActive(userId, chatRoomId)) {
+        throw new BusinessException(Code.JOINCHAT_NOT_FOUND);
+    }
 
     if (lastMessageTime == null) {
         lastMessageTime = LocalDateTime.now();
     }
 
-    // 1) Redis에서 lastMessageTime 기준으로 size 만큼 메시지 조회 (가변 리스트)
+    // 2) Redis에서 lastMessageTime 기준으로 size 만큼 메시지 조회
     List<ChatMessageRes> cachedMessages = new ArrayList<>(
             chatRedisService.getMessages(chatRoomId, lastMessageTime, size)
     );
 
+    // 3) Redis에서 가져온 메시지 N+1 제거
+    if (!cachedMessages.isEmpty()) {
+        Set<Long> senderIds = cachedMessages.stream()
+                .map(ChatMessageRes::getSenderId)
+                .collect(Collectors.toSet());
+
+        List<User> users = userRepository.findAllById(senderIds);
+        Map<Long, User> userMap = users.stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
+        cachedMessages.forEach(msg -> {
+            User user = userMap.get(msg.getSenderId());
+
+            msg.setSenderName(user.getUserProfile().getNickname());
+            msg.setEmoji(user.getUserProfile().getEmoji());
+        });
+    }
+
     int fetched = cachedMessages.size();
 
-    // 2) Redis 데이터가 부족하면 DB에서 나머지 메시지 조회
+    // 4) Redis 데이터가 부족하면 DB에서 나머지 메시지 조회
     if (fetched < size) {
         int remaining = size - fetched;
         LocalDateTime dbStartTime = cachedMessages.isEmpty()
                 ? lastMessageTime
                 : cachedMessages.get(fetched - 1).getSendAt();
 
-        List<ChatMessageRes> dbDtos = chatMongoService.getMessages(chatRoomId, dbStartTime, remaining)
-                .stream()
+        List<Message> mongoMessages = chatMongoService.getMessages(chatRoomId, dbStartTime, remaining);
+
+        // Mongo senderId 추출
+        Set<Long> mongoSenderIds = mongoMessages.stream()
+                .map(Message::getUserId)
+                .collect(Collectors.toSet());
+
+        List<User> mongoUsers = userRepository.findAllById(mongoSenderIds);
+        Map<Long, User> mongoUserMap = mongoUsers.stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
+        // Mongo → DTO 변환
+        List<ChatMessageRes> dbDtos = mongoMessages.stream()
                 .map(m -> {
-                    User user = userRepository.findById(m.getUserId())
-                            .orElseThrow(() -> new BusinessException(Code.MEMBER_NOT_FOUND));
+                    User user = mongoUserMap.get(m.getUserId());
+
+                    String nickname = user.getUserProfile().getNickname();
+                    String emoji = user.getUserProfile().getEmoji();
+
                     return ChatMessageRes.builder()
                             .id(m.getMessageId())
                             .type(m.getType())
                             .roomId(m.getChatRoomId())
                             .senderId(m.getUserId())
-                            .senderName(user.getName())
+                            .senderName(nickname)
                             .content(m.getContent())
                             .sendAt(m.getCreatedAt())
-                            .emoji(user.getUserProfile().getEmoji())
+                            .emoji(emoji)
                             .build();
                 })
                 .toList();
 
-        // DB에서 가져온 메시지는 Redis에 캐싱
+        // DB에서 가져온 메시지를 Redis에 캐싱
         dbDtos.forEach(dto -> chatRedisService.saveToRedis(chatRoomId, ChatMessageCacheDto.fromResponse(dto)));
 
         cachedMessages.addAll(dbDtos);
     }
 
-    // 최신순 정렬 후 반환
+    // 5) 최신순 정렬 후 반환
     cachedMessages.sort(Comparator.comparing(ChatMessageRes::getSendAt).reversed());
     return cachedMessages;
 }

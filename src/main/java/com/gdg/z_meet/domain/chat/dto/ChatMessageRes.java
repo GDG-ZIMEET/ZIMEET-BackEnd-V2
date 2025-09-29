@@ -37,4 +37,12 @@ public class ChatMessageRes implements Serializable {
                 // senderName, emoji는 DB에 없으므로 null → Service 계층에서 UserRepository로 보강 가능
                 .build();
     }
+
+    public void setSenderName(String name) {
+        this.senderName = name;
+    }
+
+    public void setEmoji(String emoji) {
+        this.emoji = emoji;
+    }
 }
