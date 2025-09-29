@@ -110,7 +110,7 @@ jobs:
             git fetch origin
             git reset --hard origin/main
             
-            docker-compose -f docker-compose.worker-mq.yml down --remove-orphans
+            docker-compose -f docker-compose.worker-mq.yml down
             
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest
             
