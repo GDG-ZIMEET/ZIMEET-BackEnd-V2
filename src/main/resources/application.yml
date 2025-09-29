@@ -27,14 +27,14 @@ spring:
     caffeine:
       spec: maximumSize=500,expireAfterAccess=3600s
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health
-  endpoint:
-    health:
-      show-details: always
+#management:
+#  endpoints:
+#    web:
+#      exposure:
+#        include: health
+#  endpoint:
+#    health:
+#      show-details: always
 
 jwt:
     secret: ${JWT_SECRET_KEY}
