@@ -41,6 +41,8 @@ for i in {1..30}; do
   fi
 done
 
+
+
 echo "[정보] Nginx upstream 설정 전환 입니다."
 CONF_PATH="./nginx/backend_upstream.conf"
 if [ "$IDLE" = "$GREEN_CONTAINER" ]; then
