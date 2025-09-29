@@ -1,5 +1,6 @@
 package com.gdg.z_meet;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -14,5 +15,10 @@ public class StaticController {
     @GetMapping("/favicon.ico")
     public String favicon() {
         return "forward:/static/favicon.ico"; // favicon.ico 서빙
+    }
+
+    @GetMapping("/api/health")
+    public ResponseEntity<String> health() {
+        return ResponseEntity.ok("OK");
     }
 }
