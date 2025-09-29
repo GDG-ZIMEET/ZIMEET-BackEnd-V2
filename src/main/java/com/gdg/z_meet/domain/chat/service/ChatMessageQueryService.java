@@ -111,12 +111,9 @@ public List<ChatMessageRes> getMessagesByChatRoom(
 
         cachedMessages.forEach(msg -> {
             User user = userMap.get(msg.getSenderId());
-            if (user != null && user.getUserProfile() != null) {
-                msg.setSenderName(user.getUserProfile().getNickname());
-                msg.setEmoji(user.getUserProfile().getEmoji());
-            } else {
-                msg.setSenderName("Unknown");
-            }
+
+            msg.setSenderName(user.getUserProfile().getNickname());
+            msg.setEmoji(user.getUserProfile().getEmoji());
         });
     }
 
