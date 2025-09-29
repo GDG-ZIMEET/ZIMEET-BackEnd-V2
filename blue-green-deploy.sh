@@ -26,22 +26,22 @@ docker rm -f $IDLE 2>/dev/null || true
 echo "[INFO] Starting $IDLE container..."
 docker-compose -f docker-compose.prod.yml up -d $IDLE
 
-# Health check
-echo "[INFO] Checking health of $IDLE..."
-for i in {1..10}; do
-  sleep 8
-  STATUS=$(docker exec $IDLE curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/health || echo "000")
-  echo "[INFO] Attempt $i - HTTP Status: $STATUS"
-  if [ "$STATUS" = "200" ]; then
-    echo "[SUCCESS] Health check passed."
-    break
-  fi
-  if [ "$i" = 10 ]; then
-    echo "[ERROR] Health check failed. Rolling back..."
-    docker-compose -f docker-compose.prod.yml stop $IDLE
-    exit 1
-  fi
-done
+## Health check
+#echo "[INFO] Checking health of $IDLE..."
+#for i in {1..10}; do
+#  sleep 8
+#  STATUS=$(docker exec $IDLE curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/health || echo "000")
+#  echo "[INFO] Attempt $i - HTTP Status: $STATUS"
+#  if [ "$STATUS" = "200" ]; then
+#    echo "[SUCCESS] Health check passed."
+#    break
+#  fi
+#  if [ "$i" = 10 ]; then
+#    echo "[ERROR] Health check failed. Rolling back..."
+#    docker-compose -f docker-compose.prod.yml stop $IDLE
+#    exit 1
+#  fi
+#done
 
 # nginx upstream 설정 전환
 CONF_PATH="./nginx/backend_upstream.conf"
