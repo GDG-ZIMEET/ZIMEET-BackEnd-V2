@@ -38,21 +38,14 @@ spring:
   web:
     resources:
       static-locations: classpath:/static/, file:/static/
-
-# RabbitMQ Consumer 환경변수로 제어
-api:
-  enabled: ${API_ENABLED:true}             # 기본값 true, 환경변수로 제어
-
   rabbitmq:
     host: rabbitmq
     port: 5672
-    username: ${RABBITMQ_USER:admin}
-    password: ${RABBITMQ_PASSWORD:1234}
+    username: zimeet
+    password: 1234
     virtual-host: /
-
     listener:
       simple:
-        enabled: ${RABBITMQ_LISTENER_ENABLED:false}       # 기본값 false, 환경변수로 제어
         prefetch: 10         
         concurrency: 3
         max-concurrency: 10

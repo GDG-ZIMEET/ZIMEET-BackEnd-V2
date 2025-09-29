@@ -20,30 +20,8 @@ services:
       retries: 3
     restart: unless-stopped
 
-  backend-worker-1:
-    container_name: backend-worker-1
-    image: ${DOCKERHUB_USERNAME}/zimeet:latest
-    env_file:
-      - .env
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - API_ENABLED=false
-      - RABBITMQ_LISTENER_ENABLED=true
-    networks:
-      - zimeet_network
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: [ "CMD-SHELL", "ps aux | grep '[j]ava' || exit 1" ]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
-  backend-worker-2:
-    container_name: backend-worker-2
+  backend-worker:
+    container_name: backend-worker
     image: ${DOCKERHUB_USERNAME}/zimeet:latest
     env_file:
       - .env
