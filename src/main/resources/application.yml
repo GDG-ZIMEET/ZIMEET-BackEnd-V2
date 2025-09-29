@@ -49,3 +49,8 @@ kakao:
 
 firebase:
   admin-sdk: ${FIREBASE_ADMIN_SDK_PATH}
+
+logging:
+  level:
+    org.springframework.web.servlet.PageNotFound: ERROR
+    org.springframework.web.socket.config.WebSocketMessageBrokerStats: ERROR
