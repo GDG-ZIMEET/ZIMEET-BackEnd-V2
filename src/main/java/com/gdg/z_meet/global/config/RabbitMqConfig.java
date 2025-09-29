@@ -5,6 +5,10 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -61,5 +65,33 @@ public class RabbitMqConfig {
     @Bean
     public Binding fcmDlqBinding() {
         return BindingBuilder.bind(fcmDlqQueue()).to(fcmDlxExchange()).with(FCM_DLQ_ROUTING_KEY);
+    }
+
+    /**
+     * JSON 메시지 변환기
+     */
+    @Bean
+    public MessageConverter messageConverter() {
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
+        converter.setClassMapper(classMapper());
+        return converter;
+    }
+
+    @Bean
+    public org.springframework.amqp.support.converter.DefaultClassMapper classMapper() {
+        org.springframework.amqp.support.converter.DefaultClassMapper classMapper = 
+            new org.springframework.amqp.support.converter.DefaultClassMapper();
+        classMapper.setTrustedPackages("com.gdg.z_meet.*");
+        return classMapper;
+    }
+
+    /**
+     * RabbitTemplate에 MessageConverter 설정
+     */
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+        rabbitTemplate.setMessageConverter(messageConverter());
+        return rabbitTemplate;
     }
 }
