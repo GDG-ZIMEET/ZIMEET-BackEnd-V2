@@ -28,6 +28,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod,worker
       - API_ENABLED=false
+      - SPRING_AMQP_DESERIALIZATION_TRUST_ALL=true
     networks:
       - zimeet_network
     depends_on:

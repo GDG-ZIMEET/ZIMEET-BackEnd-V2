@@ -53,6 +53,8 @@ spring:
           enabled: true
           initial-interval: 2000
           max-attempts: 5
+        acknowledge-mode: auto
+        default-requeue-rejected: false
         
 scheduling:
   enabled: true
