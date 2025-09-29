@@ -14,7 +14,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 
 @Entity
-@Table(name = "users")  // H2에서 user는 예약어이므로 users로 변경
+@Table(name = "`user`")  // H2에서 user는 예약어이므로 users로 변경
 @Getter
 @Builder
 @NoArgsConstructor
