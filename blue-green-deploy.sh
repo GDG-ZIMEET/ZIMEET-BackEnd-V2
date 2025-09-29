@@ -5,9 +5,7 @@ set -e
 BLUE_CONTAINER="backend-blue"
 GREEN_CONTAINER="backend-green"
 
-# 현재 실행 중인 컨테이너 확인 (running 또는 created 상태 모두 확인)
-BLUE_RUNNING=$(docker ps -a --filter "name=$BLUE_CONTAINER" --filter "status=running" -q)
-GREEN_RUNNING=$(docker ps -a --filter "name=$GREEN_CONTAINER" --filter "status=running" -q)
+CURRENT_CONTAINER=$(docker ps --filter "name=$BLUE_CONTAINER" --filter "status=running" -q)
 
 if [ -n "$BLUE_RUNNING" ]; then
   ACTIVE=$BLUE_CONTAINER

@@ -121,12 +121,10 @@ jobs:
             sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest|g" docker-compose.prod.yml
             sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest|g" docker-compose.worker-mq.yml
             
-            docker-compose -f docker-compose.prod.yml up -d redis mongodb
+            docker-compose -f docker-compose.prod.yml up -d redis mongodb nginx
             docker-compose -f docker-compose.worker-mq.yml up -d
             
             chmod +x ./blue-green-deploy.sh
             ./blue-green-deploy.sh
-            
-            docker-compose -f docker-compose.prod.yml up -d nginx
-            
+                        
             docker image prune -af --filter "until=24h"
