@@ -26,9 +26,8 @@ services:
     env_file:
       - .env
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_PROFILES_ACTIVE=prod,worker
       - API_ENABLED=false
-      - RABBITMQ_LISTENER_ENABLED=true
     networks:
       - zimeet_network
     depends_on:
