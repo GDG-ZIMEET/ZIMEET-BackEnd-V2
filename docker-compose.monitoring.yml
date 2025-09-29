@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    networks:
+      - zimeet_network
+    restart: always
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=zimeet
+      - GF_SECURITY_ADMIN_PASSWORD=1234
+    ports:
+      - "3000:3000"
+    networks:
+      - zimeet_network
+    restart: always
+    depends_on:
+      - prometheus
+
+  mysql-exporter:
+    image: prom/mysqld-exporter:latest
+    container_name: mysql-exporter
+    environment:
+      - DATA_SOURCE_NAME=${PROD_DB_USERNAME}:${PROD_DB_PASSWORD}@tcp(${PROD_DB_ENDPOINT}:3306)/${PROD_DB_NAME}
+    ports:
+      - "9104:9104"
+    networks:
+      - zimeet_network
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: nginx-exporter
+    command:
+      - '-nginx.scrape-uri=http://nginx:80/stub_status'
+    ports:
+      - "9113:9113"
+    networks:
+      - zimeet_network
+    restart: always
+
+  rabbitmq-exporter:
+    image: kbudde/rabbitmq-exporter:latest
+    container_name: rabbitmq-exporter
+    environment:
+      - RABBIT_URL=http://rabbitmq:15672
+      - RABBIT_USER=zimeet
+      - RABBIT_PASSWORD=1234
+    ports:
+      - "9419:9419"
+    networks:
+      - zimeet_network
+    restart: always
+
+networks:
+  zimeet_network:
+    external: true
+
+volumes:
+  prometheus_data:
+  grafana_data:
