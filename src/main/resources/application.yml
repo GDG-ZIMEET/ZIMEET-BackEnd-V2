@@ -27,12 +27,6 @@ spring:
     caffeine:
       spec: maximumSize=500,expireAfterAccess=3600s
 
-management:
-  metrics:
-    enable:
-      jvm: false
-      system: false
-
 jwt:
     secret: ${JWT_SECRET_KEY}
     expiration: 86400000
