@@ -7,7 +7,7 @@ GREEN_CONTAINER="backend-green"
 
 CURRENT_CONTAINER=$(docker ps --filter "name=$BLUE_CONTAINER" --filter "status=running" -q)
 
-if [ -n "$BLUE_RUNNING" ]; then
+if [ -n "$CURRENT_CONTAINER" ]; then
   ACTIVE=$BLUE_CONTAINER
   IDLE=$GREEN_CONTAINER
 else
