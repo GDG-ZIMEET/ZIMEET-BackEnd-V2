@@ -15,35 +15,33 @@ else
   IDLE=$BLUE_CONTAINER
 fi
 
-echo "Active container: $ACTIVE"
-echo "Deploying to: $IDLE"
+echo "현재 활성 컨테이너: $ACTIVE"
+echo "배포 대상 컨테이너: $IDLE"
 
-# 이전 중지된 동일 이름 컨테이너 제거
-echo "[INFO] Removing old $IDLE container if exists..."
+echo "[정보] 기존 $IDLE 컨테이너 제거 중 입니다."
 docker rm -f $IDLE 2>/dev/null || true
 
-# Idle 컨테이너 빌드 및 실행
-echo "[INFO] Starting $IDLE container..."
+echo "[정보] $IDLE 컨테이너 시작 중 입니다."
 docker-compose -f docker-compose.prod.yml up -d $IDLE
 
-## Health check
-#echo "[INFO] Checking health of $IDLE..."
-#for i in {1..10}; do
-#  sleep 8
-#  STATUS=$(docker exec $IDLE curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/health || echo "000")
-#  echo "[INFO] Attempt $i - HTTP Status: $STATUS"
-#  if [ "$STATUS" = "200" ]; then
-#    echo "[SUCCESS] Health check passed."
-#    break
-#  fi
-#  if [ "$i" = 10 ]; then
-#    echo "[ERROR] Health check failed. Rolling back..."
-#    docker-compose -f docker-compose.prod.yml stop $IDLE
-#    exit 1
-#  fi
-#done
+# Health check
+echo "[정보] $IDLE 헬스체크 진행 중 입니다."
+for i in {1..30}; do
+  sleep 15
+  STATUS=$(docker exec $IDLE curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/health || echo "000")
+  echo "[정보] 시도 $i - HTTP 상태: $STATUS"
+  if [ "$STATUS" = "200" ]; then
+    echo "[성공] 헬스체크 통과."
+    break
+  fi
+  if [ "$i" = 30 ]; then
+    echo "[오류] 헬스체크 실패. 롤백을 진행합니다."
+    docker-compose -f docker-compose.prod.yml stop $IDLE
+    exit 1
+  fi
+done
 
-# nginx upstream 설정 전환
+echo "[정보] Nginx upstream 설정 전환 입니다."
 CONF_PATH="./nginx/backend_upstream.conf"
 if [ "$IDLE" = "$GREEN_CONTAINER" ]; then
   echo "server $GREEN_CONTAINER:8080;" | sudo tee $CONF_PATH > /dev/null
@@ -51,15 +49,13 @@ else
   echo "server $BLUE_CONTAINER:8080;" | sudo tee $CONF_PATH > /dev/null
 fi
 
-# Reload Nginx ( 트래픽 자동 전환됨 )
-echo "[INFO] Reloading Nginx to switch traffic..."
+echo "[정보] Nginx 재로드하여 트래픽 전환 입니다."
 docker exec nginx nginx -s reload
 
-echo "[INFO] Switched traffic to $IDLE. Stopping $ACTIVE..."
+echo "[정보] $IDLE로 트래픽 전환 완료. $ACTIVE 중지 입니다."
 
-# Stop previous active container
-echo "[INFO] Stopping previous container: $ACTIVE"
+echo "[정보] 이전 활성 컨테이너 중지: $ACTIVE"
 docker-compose -f docker-compose.prod.yml stop $ACTIVE
 
-echo "[SUCCESS] Blue-Green deployment completed successfully!"
-echo "[INFO] Current active: $IDLE"
+echo "[성공] 블루-그린 배포 완료!"
+echo "[정보] 현재 활성 컨테이너: $IDLE"
