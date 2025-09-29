@@ -86,9 +86,9 @@ public List<ChatMessageRes> getMessagesByChatRoom(
 ) {
 
     // 채팅방 참여 여부 검증
-//    if (!joinChatRepository.existsByUserIdAndChatRoomIdAndStatusActive(userId, chatRoomId)) {
-//        throw new BusinessException(Code.JOINCHAT_NOT_FOUND);
-//    }
+    if (!joinChatRepository.existsByUserIdAndChatRoomIdAndStatusActive(userId, chatRoomId)) {
+        throw new BusinessException(Code.JOINCHAT_NOT_FOUND);
+    }
 
     if (lastMessageTime == null) {
         lastMessageTime = LocalDateTime.now();
@@ -98,6 +98,14 @@ public List<ChatMessageRes> getMessagesByChatRoom(
     List<ChatMessageRes> cachedMessages = new ArrayList<>(
             chatRedisService.getMessages(chatRoomId, lastMessageTime, size)
     );
+
+    // Redis에서 가져온 메시지에 senderName, emoji 정보 설정
+    cachedMessages.forEach(msg -> {
+        User user = userRepository.findById(msg.getSenderId())
+                .orElseThrow(() -> new BusinessException(Code.MEMBER_NOT_FOUND));
+        msg.setSenderName(user.getUserProfile().getNickname());
+        msg.setEmoji(user.getUserProfile().getEmoji());
+    });
 
     int fetched = cachedMessages.size();
 
