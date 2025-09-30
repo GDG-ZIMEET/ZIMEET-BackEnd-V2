@@ -19,6 +19,10 @@ scrape_configs:
     static_configs:
       - targets: ['rabbitmq-exporter:9419']
 
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
   - job_name: 'backend-blue'
     metrics_path: '/actuator/prometheus'
     static_configs:

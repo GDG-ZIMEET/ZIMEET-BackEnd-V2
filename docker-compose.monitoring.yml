@@ -92,6 +92,17 @@ services:
       - zimeet_network
     restart: always
 
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis-exporter
+    environment:
+      - REDIS_ADDR=redis1:6379
+    ports:
+      - "9121:9121"
+    networks:
+      - zimeet_network
+    restart: always
+
 networks:
   zimeet_network:
     external: true
