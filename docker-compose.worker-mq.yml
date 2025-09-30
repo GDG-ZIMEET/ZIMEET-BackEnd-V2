@@ -27,8 +27,10 @@ services:
       - .env
     environment:
       - SPRING_PROFILES_ACTIVE=prod,worker
-      - API_ENABLED=false
       - SPRING_AMQP_DESERIALIZATION_TRUST_ALL=true
+      - MYSQL_USER=${PROD_DB_USERNAME}
+      - MYSQL_PASSWORD=${PROD_DB_PASSWORD}
+      - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC&sslMode=PREFERRED&allowPublicKeyRetrieval=true
     networks:
       - zimeet_network
     depends_on:
