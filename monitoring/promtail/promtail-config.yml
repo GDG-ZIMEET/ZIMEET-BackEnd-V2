@@ -24,3 +24,8 @@ scrape_configs:
     pipeline_stages:
       - match:
           selector: '{container=~"backend-blue|backend-green|backend-worker"}'
+          stages:
+            - regex:
+                expression: '.*(?P<level>WARN|ERROR|FATAL).*'
+            - labels:
+                level:
