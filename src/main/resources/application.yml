@@ -27,6 +27,22 @@ spring:
     caffeine:
       spec: maximumSize=500,expireAfterAccess=3600s
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
 jwt:
     secret: ${JWT_SECRET_KEY}
     expiration: 86400000
