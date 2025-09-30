@@ -89,6 +89,8 @@ services:
       - ./nginx/backend_upstream.conf:/etc/nginx/backend_upstream.conf:ro
       - /etc/letsencrypt/export/api.zimeet.store:/etc/letsencrypt/live/api.zimeet.store:ro
       - /etc/letsencrypt/export/monitoring.zimeet.store:/etc/letsencrypt/live/monitoring.zimeet.store:ro
+      - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
+      - /etc/letsencrypt/privkey.pem:/etc/letsencrypt/privkey.pem:ro
     environment:
       - TZ=Asia/Seoul
     networks:
