@@ -42,6 +42,9 @@ management:
     export:
       prometheus:
         enabled: true
+    enable:
+      process:
+        cpu: false
 
 jwt:
     secret: ${JWT_SECRET_KEY}
