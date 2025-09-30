@@ -20,7 +20,8 @@ services:
     volumes:
       - grafana-storage:/var/lib/grafana
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PW}
     ports:
       - "3000:3000"
     networks:
