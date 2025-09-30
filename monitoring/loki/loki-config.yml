@@ -28,7 +28,6 @@ storage_config:
   boltdb_shipper:
     active_index_directory: /loki/index
     cache_location: /loki/cache
-    shared_store: filesystem
   filesystem:
     directory: /loki/chunks
 

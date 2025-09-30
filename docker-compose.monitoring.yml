@@ -47,8 +47,7 @@ services:
     image: grafana/promtail:latest
     container_name: promtail
     volumes:
-      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
-      - ./monitoring/promtail/positions.yaml:/etc/promtail/positions.yaml
+      - ./monitoring/promtail:/etc/promtail
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
     command: -config.file=/etc/promtail/config.yml
@@ -64,7 +63,7 @@ services:
     env_file:
       - .env
     environment:
-      - DATA_SOURCE_NAME=${PROD_DB_USERNAME}:${PROD_DB_PASSWORD}@tcp(${PROD_DB_ENDPOINT}:3306)}/
+      DATA_SOURCE_NAME: "${PROD_DB_USERNAME}:${PROD_DB_PASSWORD}@tcp(${PROD_DB_ENDPOINT}:3306)/"
     ports:
       - "9104:9104"
     networks:

@@ -8,7 +8,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.util.TimeZone;
 
-@SpringBootApplication
+@SpringBootApplication(
+		exclude = {
+				org.springframework.boot.actuate.autoconfigure.metrics.SystemMetricsAutoConfiguration.class
+		}
+)
 @EnableJpaAuditing
 @EnableScheduling
 public class ZiMeetApplication {
