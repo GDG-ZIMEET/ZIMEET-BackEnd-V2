@@ -38,7 +38,7 @@ services:
     volumes:
       - ./monitoring/loki:/etc/loki
       - loki-storage:/loki
-    command: -config.file=/etc/loki/lki-config.yml
+    command: -config.file=/etc/loki/loki-config.yml
     networks:
       - zimeet_network
     restart: always
@@ -63,7 +63,7 @@ services:
     env_file:
       - .env
     environment:
-      - DATA_SOURCE_NAME=${PROD_DB_USERNAME}:${PROD_DB_PASSWORD}@tcp(${PROD_DB_ENDPOINT}:3306)/
+      - DATA_SOURCE_NAME=${PROD_DB_USERNAME}:${PROD_DB_PASSWORD}@tcp(${PROD_DB_ENDPOINT}:3306)/${PROD_DB_NAME}
     ports:
       - "9104:9104"
     networks:
