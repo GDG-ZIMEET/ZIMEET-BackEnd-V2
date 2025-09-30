@@ -4,7 +4,7 @@ services:
     container_name: prometheus
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
+      - prometheus-storage:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -18,7 +18,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     volumes:
-      - grafana_data:/var/lib/grafana
+      - grafana-storage:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     ports:
@@ -47,6 +47,7 @@ services:
     container_name: promtail
     volumes:
       - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
+      - ./monitoring/promtail/positions.yaml:/etc/promtail/positions.yaml
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
     command: -config.file=/etc/promtail/config.yml
@@ -66,8 +67,6 @@ services:
     networks:
       - zimeet_network
     restart: always
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:latest
@@ -98,6 +97,6 @@ networks:
     external: true
 
 volumes:
-  prometheus_data:
-  grafana_data:
-  loki_data:
+  prometheus-storage:
+  grafana-storage:
+  loki-storage:

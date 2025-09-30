@@ -27,7 +27,6 @@ services:
       - .env
     environment:
       - SPRING_PROFILES_ACTIVE=prod,worker
-      - API_ENABLED=false
       - SPRING_AMQP_DESERIALIZATION_TRUST_ALL=true
       - MYSQL_USER=${PROD_DB_USERNAME}
       - MYSQL_PASSWORD=${PROD_DB_PASSWORD}
