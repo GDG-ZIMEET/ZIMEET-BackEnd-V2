@@ -26,15 +26,15 @@ docker-compose -f docker-compose.prod.yml up -d $IDLE
 
 # Health check
 echo "[정보] $IDLE 헬스체크 진행 중 입니다."
-for i in {1..30}; do
-  sleep 15
+for i in {1..40}; do
+  sleep 20
   STATUS=$(docker exec $IDLE curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/health || echo "000")
   echo "[정보] 시도 $i - HTTP 상태: $STATUS"
   if [ "$STATUS" = "200" ]; then
     echo "[성공] 헬스체크 통과."
     break
   fi
-  if [ "$i" = 30 ]; then
+  if [ "$i" = 40 ]; then
     echo "[오류] 헬스체크 실패. 롤백을 진행합니다."
     docker-compose -f docker-compose.prod.yml stop $IDLE
     exit 1
