@@ -10,7 +10,8 @@ import java.util.TimeZone;
 
 @SpringBootApplication(
 		exclude = {
-				org.springframework.boot.actuate.autoconfigure.metrics.SystemMetricsAutoConfiguration.class
+				org.springframework.boot.actuate.autoconfigure.metrics.SystemMetricsAutoConfiguration.class,
+				org.springframework.boot.actuate.autoconfigure.metrics.web.tomcat.TomcatMetricsAutoConfiguration.class
 		}
 )
 @EnableJpaAuditing

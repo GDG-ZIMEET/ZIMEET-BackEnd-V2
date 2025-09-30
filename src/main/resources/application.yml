@@ -29,7 +29,7 @@ spring:
 
 management:
   server:
-    port: 8080    # actuator 엔드포인트를 애플리케이션 포트와 동일하게 사용 (별도 분리도 가능)
+    port: 8080
   endpoints:
     web:
       exposure:
@@ -40,10 +40,17 @@ management:
       show-details: always
     prometheus:
       enabled: true
+
   metrics:
     enable:
-      process:
-        cpu: false   # ProcessorMetrics 비활성화 (cgroup 관련 NPE 방지)
+      jvm:
+        memory: true
+        gc: true
+      system:
+        cpu: false
+        files: false
+        uptime: true
+      tomcat: false
 
 jwt:
     secret: ${JWT_SECRET_KEY}
