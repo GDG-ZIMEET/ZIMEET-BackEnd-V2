@@ -2,6 +2,7 @@ auth_enabled: false
 
 server:
   http_listen_port: 3100
+  grpc_listen_port: 9095
 
 ingester:
   lifecycler:
@@ -9,9 +10,10 @@ ingester:
       kvstore:
         store: inmemory
       replication_factor: 1
+  chunk_idle_period: 5m
+  chunk_retain_period: 30s
   wal:
-    enabled: true
-    dir: /loki/wal
+    enabled: false
 
 schema_config:
   configs:
@@ -25,10 +27,10 @@ schema_config:
 
 storage_config:
   boltdb_shipper:
-    active_index_directory: /loki/index
-    cache_location: /loki/cache
+    active_index_directory: /tmp/loki/index
+    cache_location: /tmp/loki/cache
   filesystem:
-    directory: /loki/chunks
+    directory: /tmp/loki/chunks
 
 limits_config:
   reject_old_samples: true
