@@ -19,6 +19,7 @@ services:
     container_name: grafana
     volumes:
       - grafana-storage:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PW}
