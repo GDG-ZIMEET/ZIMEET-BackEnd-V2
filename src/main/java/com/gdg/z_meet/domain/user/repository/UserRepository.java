@@ -55,7 +55,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             "WHERE u.id != :userId AND up.gender != :gender AND up.profileStatus = 'ACTIVE' AND u.isDeleted = false")
     List<Long> findAllByProfileStatus(@Param("userId") Long userId, @Param("gender") Gender gender);
 
-    @Query("SELECT u FROM User u JOIN FETCH u.userProfile WHERE u.id IN :ids")
+    @Query("SELECT u FROM User u JOIN FETCH u.userProfile up WHERE u.id IN :ids AND u.isDeleted = false")
     List<User> findByIdInWithProfile(@Param("ids") List<Long> ids);
 
     @Query("SELECT u FROM User u JOIN FETCH u.userProfile up " +

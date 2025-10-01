@@ -9,10 +9,11 @@ import com.gdg.z_meet.domain.meeting.entity.enums.HiType;
 import com.gdg.z_meet.domain.meeting.repository.HiRepository;
 import com.gdg.z_meet.domain.meeting.repository.TeamRepository;
 import com.gdg.z_meet.domain.user.entity.User;
+import com.gdg.z_meet.domain.user.repository.UserProfileRepository;
 import com.gdg.z_meet.domain.user.repository.UserRepository;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,12 +24,13 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class HiCommandServiceImpl implements HiCommandService {
 
     private final HiRepository hiRepository;
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final FcmMeetingMessageService fcmMeetingMessageService;
 
     // 중복 제거용 유틸 메서드 - Team/User 공통 처리
@@ -98,7 +100,10 @@ public class HiCommandServiceImpl implements HiCommandService {
                 .build();
         hiRepository.save(hi);
 
+        // HI 개수 차감 및 저장
         from.decreaseHi();
+        teamRepository.save(from);
+        
         sendFcmGetHiTeam(hiDto);
     }
 
@@ -112,7 +117,7 @@ public class HiCommandServiceImpl implements HiCommandService {
     public void sendUserHi(MeetingRequestDTO.HiDto hiDto) {
         List<Long> userIds = Arrays.asList(hiDto.getFromId(), hiDto.getToId());
 
-        // 공통 메서드 호출하여 from, to 팀 할당
+        // 공통 메서드 호출하여 from, to 유저 할당
         Map<String, User> users = assignEntities(
                 userRepository.findByIdInWithProfile(userIds),
                 hiDto.getFromId(),
@@ -140,7 +145,10 @@ public class HiCommandServiceImpl implements HiCommandService {
                 .build();
         hiRepository.save(hi);
 
+        // HI 개수 차감 및 저장
         from.getUserProfile().decreaseHi(1);
+        userProfileRepository.save(from.getUserProfile());
+        
         sendFcmGetHiUser(hiDto);
     }
 
