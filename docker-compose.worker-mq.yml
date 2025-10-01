@@ -31,6 +31,8 @@ services:
       - MYSQL_USER=${PROD_DB_USERNAME}
       - MYSQL_PASSWORD=${PROD_DB_PASSWORD}
       - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC&sslMode=PREFERRED&allowPublicKeyRetrieval=true
+    volumes:
+      - ./firebase-adminsdk.json:/app/firebase-adminsdk.json:ro
     networks:
       - zimeet_network
     depends_on:
