@@ -75,7 +75,7 @@ services:
     env_file:
       - .env
     environment:
-      DATA_SOURCE_NAME: "${PROD_DB_USERNAME}:${PROD_DB_PASSWORD}@tcp(${PROD_DB_ENDPOINT}:3306)/${PROD_DB_NAME}"
+      - DATA_SOURCE_NAME:${PROD_DB_USERNAME}:${PROD_DB_PASSWORD}@(${PROD_DB_ENDPOINT}:3306)/
     ports:
       - "9104:9104"
     networks:
