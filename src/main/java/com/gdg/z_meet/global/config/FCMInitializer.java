@@ -7,7 +7,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
-import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -15,20 +15,20 @@ import java.io.InputStream;
 public class FCMInitializer {
 
     @Value("${firebase.admin-sdk}")
-    private String serviceAccountData;
+    private String serviceAccountPath;
 
     @PostConstruct
     public void initialize() {
         System.out.println("🔥 FCMInitializer: initialize() 시작됨");
         
-        if (serviceAccountData == null || serviceAccountData.trim().isEmpty()) {
-            System.out.println("⚠️ Firebase service account 데이터가 없어 초기화를 건너뜀");
+        if (serviceAccountPath == null || serviceAccountPath.trim().isEmpty()) {
+            System.out.println("⚠️ Firebase service account 경로가 없어 초기화를 건너뜀");
             return;
         }
         
         try {
-            // 환경 변수에서 가져온 JSON 문자열을 InputStream으로 변환
-            InputStream serviceAccount = new ByteArrayInputStream(serviceAccountData.getBytes());
+            // 파일 경로에서 JSON 파일 읽기
+            InputStream serviceAccount = new FileInputStream(serviceAccountPath);
 
             FirebaseOptions options = new FirebaseOptions.Builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
@@ -37,7 +37,7 @@ public class FCMInitializer {
             // 중복 초기화 방지
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
-                System.out.println("✅ Firebase 초기화 완료 (환경 변수 사용)");
+                System.out.println("✅ Firebase 초기화 완료 (파일 경로: " + serviceAccountPath + ")");
             } else {
                 System.out.println("ℹ️ 이미 Firebase 초기화됨");
             }
