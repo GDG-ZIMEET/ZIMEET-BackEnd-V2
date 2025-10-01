@@ -30,14 +30,27 @@ services:
     depends_on:
       - prometheus
 
+#  loki:
+#    image: grafana/loki:2.9.8
+#    container_name: loki
+#    ports:
+#      - "3100:3100"
+#    volumes:
+#      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml
+#    command: -config.file=/etc/loki/loki-config.yml
+#    networks:
+#      - zimeet_network
+#    restart: always
+
+
   loki:
-    image: grafana/loki:2.9.8
+    image: grafana/loki:2.9.2
     container_name: loki
     ports:
       - "3100:3100"
     volumes:
-      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml
-    command: -config.file=/etc/loki/loki-config.yml
+      - ./loki:/loki
+    command: -config.file=/etc/loki/local-config.yaml
     networks:
       - zimeet_network
     restart: always
@@ -61,11 +74,8 @@ services:
     container_name: mysql-exporter
     env_file:
       - .env
-    command:
-      - --mysqld.username=${PROD_DB_USERNAME}
-      - --mysqld.password=${PROD_DB_PASSWORD}
-      - --mysqld.address=${PROD_DB_ENDPOINT}:3306
-      - --mysqld.database=${PROD_DB_NAME}
+    environment:
+      DATA_SOURCE_NAME: "${PROD_DB_USERNAME}:${PROD_DB_PASSWORD}@tcp(${PROD_DB_ENDPOINT}:3306)/${PROD_DB_NAME}"
     ports:
       - "9104:9104"
     networks:
