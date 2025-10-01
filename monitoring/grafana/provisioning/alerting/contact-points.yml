@@ -13,6 +13,12 @@ contactPoints:
             
             **Summary:** {{ .CommonAnnotations.summary }}
             **Description:** {{ .CommonAnnotations.description }}
+            {{ if .Annotations.log_content }}
+            **로그 내용:**
+            ```
+            {{ .Annotations.log_content }}
+            ```
+            {{ end }}
             
             **시각:** {{ .StartsAt }}
         disableResolveMessage: false
