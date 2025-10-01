@@ -16,7 +16,7 @@ groups:
               to: 0
             datasourceUid: loki
             model:
-              expr: 'sum(count_over_time({container=~"backend-blue|backend-green|backend-worker"} |~ "ERROR|FATAL" !~ "Failed to send message to MessageChannel" [1m]))'
+              expr: 'count_over_time({container=~"backend-blue|backend-green|backend-worker"} |~ "ERROR|FATAL" !~ "Failed to send message to MessageChannel" | regexp "(?P<exception>[a-zA-Z0-9.]+Exception)" [1m]) > 0'
               refId: A
           - refId: C
             relativeTimeRange:
@@ -45,9 +45,14 @@ groups:
         execErrState: Alerting
         for: 1m
         annotations:
-          description: 'ERROR 또는 FATAL 레벨 로그가 감지되었습니다.'
-          summary: '애플리케이션에서 심각한 에러가 발생했습니다.'
+          description: '[{{ .Labels.container }}] 해당 컨테이너 점검이 필요합니다.'
+          summary: 'ERROR 또는 FATAL 레벨 로그가 감지되었습니다.'
+          log_content: '{{ range .Alerts }}{{ .Labels.line }}{{ end }}'
         labels:
           severity: critical
         notificationSettings:
           receiver: discord
+          group_by: ['alertname', 'exception', 'container']
+          group_wait: 10s
+          group_interval: 3h
+          repeat_interval: 3h
