@@ -81,7 +81,7 @@ public class RabbitMqConfig {
     public org.springframework.amqp.support.converter.DefaultClassMapper classMapper() {
         org.springframework.amqp.support.converter.DefaultClassMapper classMapper = 
             new org.springframework.amqp.support.converter.DefaultClassMapper();
-        classMapper.setTrustedPackages("com.gdg.z_meet");
+        classMapper.setTrustedPackages("java.util", "java.lang", "com.gdg.z_meet.domain.fcm.dto");
         return classMapper;
     }
 
