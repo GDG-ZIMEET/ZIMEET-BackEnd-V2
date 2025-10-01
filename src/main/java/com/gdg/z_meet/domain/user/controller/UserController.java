@@ -1,5 +1,6 @@
 package com.gdg.z_meet.domain.user.controller;
 
+import com.gdg.z_meet.global.security.annotation.AuthUser;
 import com.gdg.z_meet.global.security.jwt.JwtUtil;
 import com.gdg.z_meet.global.response.Response;
 import com.gdg.z_meet.domain.user.dto.Token;
@@ -115,13 +116,22 @@ public class UserController {
         return Response.ok(UserRes.CheckLoginRes.loggedOut());
     }
 
+    @PostMapping("/verify")
+    @Operation(summary = "사용자 검증", description = "비밀번호 재설정을 위한 사용자 검증")
+    public Response<UserRes.UserVerifyRes> verifyUser(@RequestBody UserReq.UserVerifyReq userVerifyReq) {
+        UserRes.UserVerifyRes userVerifyRes = userService.verifyUser(
+                userVerifyReq.getName(),
+                userVerifyReq.getStudentNumber(),
+                userVerifyReq.getPhoneNumber()
+        );
+        return Response.ok(userVerifyRes);
+    }
+
     @PostMapping("/reset")
     @Operation(summary = "비밀번호 재설정", description = "비밀번호 재설정")
-    public Response<?> resetPassword(@RequestBody UserReq.ResetPasswordReq resetPasswordReq) {
+    public Response<UserRes.UpdatePasswordRes> resetPassword(@RequestBody UserReq.ResetPasswordReq resetPasswordReq) {
         UserRes.UpdatePasswordRes updatePasswordRes = userService.resetPassword(
-                resetPasswordReq.getName(),
                 resetPasswordReq.getStudentNumber(),
-                resetPasswordReq.getPhoneNumber(),
                 resetPasswordReq.getNewPassword(),
                 resetPasswordReq.getConfirmPassword()
         );

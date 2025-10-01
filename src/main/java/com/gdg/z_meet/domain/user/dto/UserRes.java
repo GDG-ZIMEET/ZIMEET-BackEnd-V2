@@ -159,6 +159,14 @@ public class UserRes {
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
+    public static class UserVerifyRes {
+        private String message;
+    }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class UpdatePasswordRes {
         private String message;
     }

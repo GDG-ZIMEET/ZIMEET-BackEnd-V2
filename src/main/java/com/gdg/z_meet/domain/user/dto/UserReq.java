@@ -75,10 +75,19 @@ public class UserReq {
     @AllArgsConstructor
     @Getter
     @Setter
-    public static class ResetPasswordReq{
+    public static class UserVerifyReq {
         private String name;
         private String studentNumber;
         private String phoneNumber;
+    }
+
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Getter
+    @Setter
+    public static class ResetPasswordReq{
+        private String studentNumber;
         private String newPassword;
         private String confirmPassword;
     }

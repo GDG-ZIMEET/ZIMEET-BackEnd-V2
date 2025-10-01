@@ -245,17 +245,27 @@ public class UserService {
         log.info("Refresh token cookie cleared");
     }
 
-    @Transactional
-    public UserRes.UpdatePasswordRes resetPassword(String name, String studentNumber, String phoneNumber, String newPassword, String confirmPassword) {
+    @Transactional(readOnly = true)
+    public UserRes.UserVerifyRes verifyUser(String name, String studentNumber, String phoneNumber) {
         Optional<User> userOpt = userRepository.findByNameAndStudentNumberAndPhoneNumber(name, studentNumber, phoneNumber);
         if (userOpt.isEmpty()){
             throw new BusinessException(Code.PROFILE_NOT_FOUND);
         }
+
+        return UserRes.UserVerifyRes.builder()
+                .message("사용자 검증이 완료되었습니다.")
+                .build();
+    }
+
+    @Transactional
+    public UserRes.UpdatePasswordRes resetPassword(String studentNumber, String newPassword, String confirmPassword) {
+        User user = userRepository.findByStudentNumber(studentNumber)
+                .orElseThrow(() -> new BusinessException(Code.PROFILE_NOT_FOUND));
+
         if (!newPassword.equals(confirmPassword)) {
             throw new BusinessException(Code.PASSWORD_MISMATCH);
         }
 
-        User user = userOpt.get();
         user.setPassword(encoder.encode(newPassword));
 
         return UserRes.UpdatePasswordRes.builder()
