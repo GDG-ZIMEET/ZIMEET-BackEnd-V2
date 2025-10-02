@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -34,7 +36,7 @@ public class FcmTokenServiceImpl implements FcmTokenService {
     }
 
     /**
-     *  FCM 코큰 갱신
+     *  FCM 토큰 갱신
      */
     @Override
     @Transactional
@@ -42,24 +44,22 @@ public class FcmTokenServiceImpl implements FcmTokenService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(Code.USER_NOT_FOUND));
 
-        if (!user.isPushAgree()) { 
+        if (!user.isPushAgree()) {
             throw new BusinessException(Code.FCM_PUSH_NOT_AGREED);
         }
 
         String newToken = req.getFcmToken();
-        FcmToken token = fcmTokenRepository.findByUser(user).orElse(null);
 
-        if (token == null) {
-            fcmTokenRepository.save(FcmToken.builder()
-                    .user(user)
-                    .token(newToken)
-                    .build());
-            return;
-        }
+        // 기존 토큰 row 조회 시점에 쓰기 락(동일 트랜잭션 읽기, 수정 방지)
+        Optional<FcmToken> existing = fcmTokenRepository.findByUserForUpdate(user);
+        existing.ifPresent(fcmTokenRepository::delete);
 
-        // 토큰이 다를 때만 갱신
-        if (!newToken.equals(token.getToken())) {
-            token.setToken(newToken);
-        }
+        // 즉시 반영
+        fcmTokenRepository.flush();
+
+        fcmTokenRepository.save(FcmToken.builder()
+                .user(user)
+                .token(newToken)
+                .build());
     }
 }
