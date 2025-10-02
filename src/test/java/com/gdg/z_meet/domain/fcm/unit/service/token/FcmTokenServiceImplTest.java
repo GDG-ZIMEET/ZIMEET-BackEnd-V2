@@ -109,18 +109,21 @@ class FcmTokenServiceImplTest {
     }
 
     @Test
+    @DisplayName("FCM 토큰 동기화 성공 - 새 토큰 생성")
     void FCM토큰_동기화성공_새토큰생성() {
         UserReq.saveFcmTokenReq req = UserReq.saveFcmTokenReq.builder()
                 .fcmToken("new-fcm-token")
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(fcmTokenRepository.findByUser(testUser)).thenReturn(Optional.empty());
+        when(fcmTokenRepository.findByUserForUpdate(testUser)).thenReturn(Optional.empty());
 
         fcmTokenService.syncFcmToken(1L, req);
 
         verify(userRepository).findById(1L);
-        verify(fcmTokenRepository).findByUser(testUser);
+        verify(fcmTokenRepository).findByUserForUpdate(testUser);
+        verify(fcmTokenRepository, never()).delete(any());
+        verify(fcmTokenRepository).flush();
         verify(fcmTokenRepository).save(argThat(token ->
                 token.getToken().equals("new-fcm-token") &&
                         token.getUser().equals(testUser)
@@ -128,41 +131,25 @@ class FcmTokenServiceImplTest {
     }
 
     @Test
-    void FCM토큰_동기화성공_기존토큰업데이트() {
+    @DisplayName("FCM 토큰 동기화 성공 - 기존 토큰 삭제 후 재생성")
+    void FCM토큰_동기화성공_기존토큰삭제후재생성() {
         UserReq.saveFcmTokenReq req = UserReq.saveFcmTokenReq.builder()
                 .fcmToken("updated-fcm-token")
                 .build();
 
-        FcmToken spyToken = spy(existingToken);
-
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(fcmTokenRepository.findByUser(testUser)).thenReturn(Optional.of(spyToken));
+        when(fcmTokenRepository.findByUserForUpdate(testUser)).thenReturn(Optional.of(existingToken));
 
         fcmTokenService.syncFcmToken(1L, req);
 
         verify(userRepository).findById(1L);
-        verify(fcmTokenRepository).findByUser(testUser);
-        verify(spyToken).setToken("updated-fcm-token");
-        verify(fcmTokenRepository, never()).save(any());
-    }
-
-    @Test
-    void FCM토큰_동기화성공_동일토큰() {
-        UserReq.saveFcmTokenReq req = UserReq.saveFcmTokenReq.builder()
-                .fcmToken("existing-token")
-                .build();
-
-        FcmToken spyToken = spy(existingToken);
-
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(fcmTokenRepository.findByUser(testUser)).thenReturn(Optional.of(spyToken));
-
-        fcmTokenService.syncFcmToken(1L, req);
-
-        verify(userRepository).findById(1L);
-        verify(fcmTokenRepository).findByUser(testUser);
-        verify(spyToken, never()).setToken(any());
-        verify(fcmTokenRepository, never()).save(any());
+        verify(fcmTokenRepository).findByUserForUpdate(testUser);
+        verify(fcmTokenRepository).delete(existingToken);
+        verify(fcmTokenRepository).flush();
+        verify(fcmTokenRepository).save(argThat(token ->
+                token.getToken().equals("updated-fcm-token") &&
+                        token.getUser().equals(testUser)
+        ));
     }
 
     @Test
@@ -191,41 +178,43 @@ class FcmTokenServiceImplTest {
                 () -> fcmTokenService.syncFcmToken(2L, req));
 
         assertEquals(Code.FCM_PUSH_NOT_AGREED, exception.getCode());
-        verify(fcmTokenRepository, never()).findByUser(any());
+        verify(fcmTokenRepository, never()).findByUserForUpdate(any());
         verify(fcmTokenRepository, never()).save(any());
     }
 
     @Test
-    void FCM토큰_동기화_null토큰() {
+    @DisplayName("FCM 토큰 동기화 - 동시성 테스트 (쓰기락 검증)")
+    void FCM토큰_동기화_동시성_쓰기락검증() {
         UserReq.saveFcmTokenReq req = UserReq.saveFcmTokenReq.builder()
-                .fcmToken(null)
+                .fcmToken("concurrent-token")
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(fcmTokenRepository.findByUser(testUser)).thenReturn(Optional.empty());
+        when(fcmTokenRepository.findByUserForUpdate(testUser)).thenReturn(Optional.empty());
 
         fcmTokenService.syncFcmToken(1L, req);
 
-        verify(fcmTokenRepository).save(argThat(token ->
-                token.getToken() == null &&
-                        token.getUser().equals(testUser)
-        ));
+        verify(fcmTokenRepository).findByUserForUpdate(testUser);
+        verify(fcmTokenRepository).flush();
+        verify(fcmTokenRepository, times(1)).save(any(FcmToken.class));
     }
 
     @Test
-    void FCM토큰_동기화_빈문자열토큰() {
+    @DisplayName("FCM 토큰 동기화 - 기존 토큰 존재 시 삭제 후 저장 확인")
+    void FCM토큰_동기화_기존토큰존재시_삭제후저장() {
         UserReq.saveFcmTokenReq req = UserReq.saveFcmTokenReq.builder()
-                .fcmToken("")
+                .fcmToken("new-token-after-delete")
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(fcmTokenRepository.findByUser(testUser)).thenReturn(Optional.empty());
+        when(fcmTokenRepository.findByUserForUpdate(testUser)).thenReturn(Optional.of(existingToken));
 
         fcmTokenService.syncFcmToken(1L, req);
 
+        verify(fcmTokenRepository).delete(existingToken);
+        verify(fcmTokenRepository).flush();
         verify(fcmTokenRepository).save(argThat(token ->
-                token.getToken().equals("") &&
-                        token.getUser().equals(testUser)
+                token.getToken().equals("new-token-after-delete")
         ));
     }
 }
