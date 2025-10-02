@@ -122,8 +122,6 @@ class FcmTokenServiceImplTest {
 
         verify(userRepository).findById(1L);
         verify(fcmTokenRepository).findByUserForUpdate(testUser);
-        verify(fcmTokenRepository, never()).delete(any());
-        verify(fcmTokenRepository).flush();
         verify(fcmTokenRepository).save(argThat(token ->
                 token.getToken().equals("new-fcm-token") &&
                         token.getUser().equals(testUser)
@@ -131,8 +129,8 @@ class FcmTokenServiceImplTest {
     }
 
     @Test
-    @DisplayName("FCM 토큰 동기화 성공 - 기존 토큰 삭제 후 재생성")
-    void FCM토큰_동기화성공_기존토큰삭제후재생성() {
+    @DisplayName("FCM 토큰 동기화 성공 - 기존 토큰 업데이트")
+    void FCM토큰_동기화성공_기존토큰업데이트() {
         UserReq.saveFcmTokenReq req = UserReq.saveFcmTokenReq.builder()
                 .fcmToken("updated-fcm-token")
                 .build();
@@ -144,12 +142,8 @@ class FcmTokenServiceImplTest {
 
         verify(userRepository).findById(1L);
         verify(fcmTokenRepository).findByUserForUpdate(testUser);
-        verify(fcmTokenRepository).delete(existingToken);
         verify(fcmTokenRepository).flush();
-        verify(fcmTokenRepository).save(argThat(token ->
-                token.getToken().equals("updated-fcm-token") &&
-                        token.getUser().equals(testUser)
-        ));
+        assertEquals("updated-fcm-token", existingToken.getToken());
     }
 
     @Test
@@ -195,15 +189,14 @@ class FcmTokenServiceImplTest {
         fcmTokenService.syncFcmToken(1L, req);
 
         verify(fcmTokenRepository).findByUserForUpdate(testUser);
-        verify(fcmTokenRepository).flush();
         verify(fcmTokenRepository, times(1)).save(any(FcmToken.class));
     }
 
     @Test
-    @DisplayName("FCM 토큰 동기화 - 기존 토큰 존재 시 삭제 후 저장 확인")
-    void FCM토큰_동기화_기존토큰존재시_삭제후저장() {
+    @DisplayName("FCM 토큰 동기화 - 기존 토큰 존재 시 업데이트 확인")
+    void FCM토큰_동기화_기존토큰존재시_업데이트() {
         UserReq.saveFcmTokenReq req = UserReq.saveFcmTokenReq.builder()
-                .fcmToken("new-token-after-delete")
+                .fcmToken("new-token-after-update")
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
@@ -211,10 +204,7 @@ class FcmTokenServiceImplTest {
 
         fcmTokenService.syncFcmToken(1L, req);
 
-        verify(fcmTokenRepository).delete(existingToken);
         verify(fcmTokenRepository).flush();
-        verify(fcmTokenRepository).save(argThat(token ->
-                token.getToken().equals("new-token-after-delete")
-        ));
+        assertEquals("new-token-after-update", existingToken.getToken());
     }
 }
