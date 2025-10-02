@@ -51,15 +51,23 @@ public class FcmTokenServiceImpl implements FcmTokenService {
         String newToken = req.getFcmToken();
 
         // 기존 토큰 row 조회 시점에 쓰기 락(동일 트랜잭션 읽기, 수정 방지)
-        Optional<FcmToken> existing = fcmTokenRepository.findByUserForUpdate(user);
-        existing.ifPresent(fcmTokenRepository::delete);
+        Optional<FcmToken> existingOpt = fcmTokenRepository.findByUserForUpdate(user);
 
-        // 즉시 반영
-        fcmTokenRepository.flush();
-
-        fcmTokenRepository.save(FcmToken.builder()
-                .user(user)
-                .token(newToken)
-                .build());
+        if (existingOpt.isPresent()) {
+            FcmToken existing = existingOpt.get();
+            // 토큰이 다르면 업데이트
+            if (!existing.getToken().equals(newToken)) {
+                existing.setToken(newToken);
+                fcmTokenRepository.flush();
+            }
+        } else {
+            // 없으면 새로 생성
+            fcmTokenRepository.save(
+                    FcmToken.builder()
+                            .user(user)
+                            .token(newToken)
+                            .build()
+            );
+        }
     }
 }

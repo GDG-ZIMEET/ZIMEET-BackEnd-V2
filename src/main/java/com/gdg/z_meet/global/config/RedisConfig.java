@@ -32,7 +32,6 @@ public class RedisConfig {
 
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
-        System.out.println("Configured Redis Host: " + host + ", Port: " + port);
         return new LettuceConnectionFactory(host, port);
     }
 
