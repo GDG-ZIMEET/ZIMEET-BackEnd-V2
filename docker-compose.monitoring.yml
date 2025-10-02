@@ -65,6 +65,11 @@ services:
       - .env
     environment:
       - DATA_SOURCE_NAME=${PROD_DB_USERNAME}:${PROD_DB_PASSWORD}@(${PROD_DB_ENDPOINT}:3306)/
+    command:
+      - '--collect.perf_schema.eventsstatements'
+      - '--collect.perf_schema.eventsstatementssum'
+      - '--collect.perf_schema.eventswaits'
+      - '--collect.info_schema.processlist'
     ports:
       - "9104:9104"
     networks:
