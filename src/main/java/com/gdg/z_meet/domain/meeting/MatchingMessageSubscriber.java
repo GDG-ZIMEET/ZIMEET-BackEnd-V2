@@ -3,9 +3,11 @@ package com.gdg.z_meet.domain.meeting;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gdg.z_meet.domain.meeting.dto.RandomResponseDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
+@Profile("!worker")
 @Component
 @RequiredArgsConstructor
 public class MatchingMessageSubscriber {

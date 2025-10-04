@@ -3,6 +3,7 @@ package com.gdg.z_meet.global.config;
 import com.gdg.z_meet.domain.meeting.MatchingMessageSubscriber;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -17,6 +18,7 @@ public class RedisMatchingConfig {
         return new PatternTopic("matching.*");
     }
 
+    @Profile("!worker")
     @Bean
     public MessageListenerAdapter matchingMessageListener(MatchingMessageSubscriber subscriber) {
 
