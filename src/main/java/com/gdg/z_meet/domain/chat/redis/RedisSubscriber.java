@@ -2,11 +2,11 @@ package com.gdg.z_meet.domain.chat.redis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gdg.z_meet.domain.chat.dto.ChatMessageCacheDto;
-import com.gdg.z_meet.domain.chat.dto.ChatMessageReq;
-import com.gdg.z_meet.domain.chat.dto.ChatMessageRes;
 import com.gdg.z_meet.domain.chat.service.ChatMessageHandlerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 
+@Profile("!worker")
 @Slf4j
 @Component
 @RequiredArgsConstructor

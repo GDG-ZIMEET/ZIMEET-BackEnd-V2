@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -105,6 +106,7 @@ public class RedisConfig {
 
     //메시지 받을때 실행될 리스너 어댑터(subscriber의 onMessage 메서드 실행)
     @Bean
+    @Profile("!worker")
     public MessageListenerAdapter listenerAdapter(RedisSubscriber subscriber) {
         // RedisSubscriber.onMessage() 실행되도록 연결
         return new MessageListenerAdapter(subscriber, "onMessage");
