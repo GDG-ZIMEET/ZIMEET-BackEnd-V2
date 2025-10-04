@@ -116,12 +116,14 @@ public class User extends BaseEntity implements UserDetails {
     }
 
     public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 
     public void setName(String name) {
+        this.name = name;
     }
 
     public void setStudentNumber(String studentNumber) {
-        
+        this.studentNumber = studentNumber;
     }
 }
