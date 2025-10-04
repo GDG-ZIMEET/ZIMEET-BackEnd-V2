@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
-@Profile("!worker")
 @Component
 @RequiredArgsConstructor
 public class MatchingMessageSubscriber {

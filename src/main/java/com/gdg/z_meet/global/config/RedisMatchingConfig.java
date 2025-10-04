@@ -18,7 +18,6 @@ public class RedisMatchingConfig {
         return new PatternTopic("matching.*");
     }
 
-    @Profile("!worker")
     @Bean
     public MessageListenerAdapter matchingMessageListener(MatchingMessageSubscriber subscriber) {
 
