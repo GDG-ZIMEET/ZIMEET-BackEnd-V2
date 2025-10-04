@@ -114,4 +114,14 @@ public class User extends BaseEntity implements UserDetails {
             fcmToken.setUser(this);
         }
     }
+
+    public void setPhoneNumber(String phoneNumber) {
+    }
+
+    public void setName(String name) {
+    }
+
+    public void setStudentNumber(String studentNumber) {
+        
+    }
 }
