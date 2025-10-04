@@ -43,6 +43,7 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
         
         return queryFactory
                 .selectFrom(user)
+                .distinct()
                 .join(user.userProfile, userProfile).fetchJoin()
                 .leftJoin(userTeam).on(userTeam.user.eq(user))
                 .leftJoin(team).on(
