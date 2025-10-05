@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.hibernate5.jakarta.Hibernate5JakartaModule;
 import com.gdg.z_meet.domain.chat.redis.RedisSubscriber;
+import com.gdg.z_meet.domain.meeting.MatchingMessageSubscriber;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -104,6 +105,13 @@ public class RedisConfig {
         return objectMapper;
     }
 
+    //매칭 리스너 어댑터
+    @Bean
+    @Profile("!worker") // 매칭 기능도 worker가 아니라면 여기에 Profile 추가
+    public MessageListenerAdapter matchingListenerAdapter(MatchingMessageSubscriber subscriber) {
+        return new MessageListenerAdapter(subscriber, "handleMessage");
+    }
+
     //메시지 받을때 실행될 리스너 어댑터(subscriber의 onMessage 메서드 실행)
     @Bean
     @Profile("!worker")
@@ -114,15 +122,19 @@ public class RedisConfig {
 
     //Redis Pub/Sub 구독을 관리하는 컨테이너
     @Bean
+    @Profile("!worker")
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
-            MessageListenerAdapter listenerAdapter) {
-
+            // @Qualifier를 사용해 어떤 리스너를 주입받을지 명시
+            @Qualifier("listenerAdapter") MessageListenerAdapter chatListenerAdapter,
+            @Qualifier("matchingListenerAdapter") MessageListenerAdapter matchingListenerAdapter
+    ) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
 
-        // 특정 채널 또는 패턴을 구독
-        container.addMessageListener(listenerAdapter, new PatternTopic("chat:room:*"));
+        // 필요한 모든 리스너를 이 컨테이너 하나에 등록
+        container.addMessageListener(chatListenerAdapter, new PatternTopic("chat:room:*"));
+        container.addMessageListener(matchingListenerAdapter, new PatternTopic("matching.*"));
 
         return container;
     }
