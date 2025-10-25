@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,9 @@ public class FcmTokenServiceImpl implements FcmTokenService {
 
     private final UserRepository userRepository;
     private final FcmTokenRepository fcmTokenRepository;
+    
+    // 사용자별 동기화를 위한 락 맵
+    private final Map<Long, Object> userLocks = new ConcurrentHashMap<>();
 
     /**
      *  FCM 푸시 알림 사용자 동의 여부
@@ -40,13 +45,32 @@ public class FcmTokenServiceImpl implements FcmTokenService {
      * FCM 토큰 동기화 (동시성 안전)
      * 
      * 동시성 문제 해결 전략:
-     * 1. 사용자 검증 후 단일 트랜잭션에서 처리
-     * 2. findByUserForUpdate로 락 획득하여 토큰 처리
-     * 3. 락이 걸린 상태에서 안전하게 업데이트/생성
+     * 1. 사용자별 동기화 락으로 동시성 보장
+     * 2. 사용자 검증 후 단일 트랜잭션에서 처리
+     * 3. findByUserForUpdate로 락 획득하여 토큰 처리
+     * 4. 락이 걸린 상태에서 안전하게 업데이트/생성
      */
     @Override
     @Transactional
     public void syncFcmToken(Long userId, UserReq.saveFcmTokenReq req) {
+        // 사용자별 동기화 락 획득
+        Object userLock = userLocks.computeIfAbsent(userId, k -> new Object());
+        
+        synchronized (userLock) {
+            try {
+                doSyncFcmToken(userId, req);
+            } finally {
+                // 메모리 누수 방지를 위해 락 제거
+                userLocks.remove(userId);
+            }
+        }
+    }
+    
+    /**
+     * 실제 FCM 토큰 동기화 로직
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void doSyncFcmToken(Long userId, UserReq.saveFcmTokenReq req) {
         // 사용자 검증
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(Code.USER_NOT_FOUND));
