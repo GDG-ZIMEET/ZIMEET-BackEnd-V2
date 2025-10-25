@@ -8,6 +8,11 @@ import lombok.*;
 @Getter
 @Builder
 @Entity
+@Table(name = "fcm_token", 
+       uniqueConstraints = {
+           @UniqueConstraint(name = "uk_fcm_token_user", columnNames = "user_id"),
+           @UniqueConstraint(name = "uk_fcm_token_value", columnNames = "token")
+       })
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FcmToken extends BaseEntity {

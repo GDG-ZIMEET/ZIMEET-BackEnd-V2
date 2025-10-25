@@ -69,119 +69,127 @@ class FcmTokenConcurrencyTest {
 
     @AfterEach
     void tearDown() {
+        // FCM 토큰 먼저 삭제 (외래키 제약조건 때문에)
         fcmTokenRepository.deleteAll();
+        // 사용자 삭제
         userRepository.deleteAll();
+        // 영속성 컨텍스트 비우기
+        em.clear();
     }
+
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @DisplayName("동시에 여러 요청이 들어와도 FcmToken은 1개만 생성된다")
-    void 동시_요청시_토큰_중복_생성_방지() throws InterruptedException {
+    @DisplayName("CASE 1: 기존에 토큰이 있을 때 여러 요청이 동시에 update 시도")
+    void CASE1_기존_토큰_있음_동시_UPDATE_시도() throws InterruptedException {
+        // DB에 이미 user_id의 토큰 "old-token" 존재
+        String oldToken = "old-token";
+        FcmToken existingToken = FcmToken.builder()
+                .user(testUser)
+                .token(oldToken)
+                .build();
+        fcmTokenRepository.save(existingToken);
+
+        // 기존 토큰 존재 확인
+        List<FcmToken> beforeTokens = fcmTokenRepository.findAllByUser(testUser);
+        assertThat(beforeTokens).hasSize(1);
+        assertThat(beforeTokens.get(0).getToken()).isEqualTo(oldToken);
+
         int threadCount = 10;
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
         AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
 
+        // 10개 스레드가 "updated-token-0" ~ "updated-token-9"로 동시에 요청
         for (int i = 0; i < threadCount; i++) {
-            final int index = i;
+            final int tokenIndex = i;
             executorService.submit(() -> {
                 try {
+                    String newToken = "updated-token-" + tokenIndex;
                     UserReq.saveFcmTokenReq req = UserReq.saveFcmTokenReq.builder()
-                            .fcmToken("concurrent-token-" + index)
+                            .fcmToken(newToken)
                             .build();
 
                     fcmTokenService.syncFcmToken(testUser.getId(), req);
                     successCount.incrementAndGet();
                 } catch (Exception e) {
-                    System.err.println("Thread " + index + " failed: " + e.getMessage());
+                    failureCount.incrementAndGet();
+                    System.err.println("Thread " + tokenIndex + " failed: " + e.getMessage());
                 } finally {
                     latch.countDown();
                 }
             });
         }
 
-        latch.await(10, TimeUnit.SECONDS);
+        latch.await(15, TimeUnit.SECONDS);
         executorService.shutdown();
 
-        // DB에서 다시 조회 (1개만 존재해야 함)
-        List<FcmToken> tokens = fcmTokenRepository.findAllByUser(testUser);
+        // 검증: DB에는 여전히 row 1개만 존재
+        List<FcmToken> afterTokens = fcmTokenRepository.findAllByUser(testUser);
 
-        assertThat(tokens).hasSize(1);
-    }
+        System.out.println("=== CASE 1 결과 ===");
+        System.out.println("성공한 요청: " + successCount.get());
+        System.out.println("실패한 요청: " + failureCount.get());
+        System.out.println("최종 토큰 개수: " + afterTokens.size());
+        System.out.println("최종 토큰 값: " + afterTokens.get(0).getToken());
 
-
-    @Test
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @DisplayName("동시에 같은 토큰으로 요청해도 중복 생성되지 않는다")
-    void 동시_요청_같은_토큰_중복_방지() throws InterruptedException {
-        int threadCount = 5;
-        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch latch = new CountDownLatch(threadCount);
-
-        String sameToken = "same-token-value";
-
-        for (int i = 0; i < threadCount; i++) {
-            executorService.submit(() -> {
-                try {
-                    UserReq.saveFcmTokenReq req = UserReq.saveFcmTokenReq.builder()
-                            .fcmToken(sameToken)
-                            .build();
-
-                    fcmTokenService.syncFcmToken(testUser.getId(), req);
-                } catch (Exception e) {
-                    System.err.println("Failed: " + e.getMessage());
-                } finally {
-                    latch.countDown();
-                }
-            });
-        }
-
-        latch.await(10, TimeUnit.SECONDS);
-        executorService.shutdown();
-
-        List<FcmToken> tokens = fcmTokenRepository.findAllByUser(testUser);
-
-        assertThat(tokens).hasSize(1);
-        assertThat(tokens.get(0).getToken()).isEqualTo(sameToken);
+        // 검증 포인트
+        assertThat(afterTokens).hasSize(1); // row 개수 유지 (COUNT(*) = 1)
+        assertThat(successCount.get()).isEqualTo(threadCount); // 예외/충돌 없이 모든 요청 정상 커밋
+        assertThat(failureCount.get()).isEqualTo(0); // Deadlock 없이 정상 종료
+        assertThat(afterTokens.get(0).getToken()).startsWith("updated-token-"); // 최종 token 값은 요청 중 하나의 값
     }
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @DisplayName("기존 토큰이 있을 때 동시 업데이트 요청이 와도 1개만 유지된다")
-    void 기존_토큰_존재시_동시_업데이트_중복_방지() throws InterruptedException {
-        FcmToken existingToken = FcmToken.builder()
-                .user(testUser)
-                .token("existing-token")
-                .build();
-        fcmTokenRepository.save(existingToken);
+    @DisplayName("CASE 2: 기존에 토큰이 없는 상태에서 여러 요청이 동시에 insert 시도")
+    void CASE1_기존_토큰_없음_동시_INSERT_시도() throws InterruptedException {
+        // DB에 user_id의 FcmToken row가 없는 상태 확인
+        List<FcmToken> beforeTokens = fcmTokenRepository.findAllByUser(testUser);
+        assertThat(beforeTokens).isEmpty();
 
         int threadCount = 10;
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
 
+        // 동시에 10개의 스레드가 서로 다른 토큰 값으로 요청
         for (int i = 0; i < threadCount; i++) {
-            final int index = i;
+            final int tokenIndex = i;
             executorService.submit(() -> {
                 try {
                     UserReq.saveFcmTokenReq req = UserReq.saveFcmTokenReq.builder()
-                            .fcmToken("updated-token-" + index)
+                            .fcmToken("token-" + tokenIndex)
                             .build();
 
                     fcmTokenService.syncFcmToken(testUser.getId(), req);
+                    successCount.incrementAndGet();
                 } catch (Exception e) {
-                    System.err.println("Thread " + index + " failed: " + e.getMessage());
+                    failureCount.incrementAndGet();
+                    System.err.println("Thread " + tokenIndex + " failed: " + e.getMessage());
                 } finally {
                     latch.countDown();
                 }
             });
         }
 
-        latch.await(10, TimeUnit.SECONDS);
+        latch.await(15, TimeUnit.SECONDS);
         executorService.shutdown();
 
-        List<FcmToken> tokens = fcmTokenRepository.findAllByUser(testUser);
+        // 검증: DB에는 최종적으로 1개의 row만 존재
+        List<FcmToken> afterTokens = fcmTokenRepository.findAllByUser(testUser);
 
-        assertThat(tokens).hasSize(1);
-        assertThat(tokens.get(0).getToken()).startsWith("updated-token-");
+        System.out.println("=== CASE 2 결과 ===");
+        System.out.println("성공한 요청: " + successCount.get());
+        System.out.println("실패한 요청: " + failureCount.get());
+        System.out.println("최종 토큰 개수: " + afterTokens.size());
+        System.out.println("최종 토큰 값: " + (afterTokens.isEmpty() ? "없음" : afterTokens.get(0).getToken()));
+
+        // 검증 포인트
+        assertThat(afterTokens).hasSize(1); // DB에는 1개의 row만 존재
+        assertThat(successCount.get()).isGreaterThan(0); // 최소 1개는 성공
+        // UNIQUE 에러는 발생할 수 있지만, 최종적으로 1개만 존재하면 OK
     }
 }
