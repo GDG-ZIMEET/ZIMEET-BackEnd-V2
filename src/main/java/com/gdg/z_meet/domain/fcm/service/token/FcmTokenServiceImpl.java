@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +27,7 @@ public class FcmTokenServiceImpl implements FcmTokenService {
     private final FcmTokenRepository fcmTokenRepository;
     
     // 사용자별 동기화를 위한 락 맵
-    private final Map<Long, Object> userLocks = new ConcurrentHashMap<>();
+    private final Map<Long, ReentrantLock> userLocks = new ConcurrentHashMap<>();
 
     /**
      *  FCM 푸시 알림 사용자 동의 여부
@@ -54,14 +55,17 @@ public class FcmTokenServiceImpl implements FcmTokenService {
     @Transactional
     public void syncFcmToken(Long userId, UserReq.saveFcmTokenReq req) {
         // 사용자별 동기화 락 획득
-        Object userLock = userLocks.computeIfAbsent(userId, k -> new Object());
-        
-        synchronized (userLock) {
-            try {
-                doSyncFcmToken(userId, req);
-            } finally {
-                // 메모리 누수 방지를 위해 락 제거
-                userLocks.remove(userId);
+        ReentrantLock lock = userLocks.computeIfAbsent(userId, k -> new ReentrantLock());
+        lock.lock();
+
+        try {
+            doSyncFcmToken(userId, req);
+        } finally {
+            lock.unlock();
+
+            // 필요 시 조건부 제거(경합이 없을 때만)
+            if(!lock.isLocked() && !lock.hasQueuedThreads()){
+                userLocks.remove(userId, lock);
             }
         }
     }
