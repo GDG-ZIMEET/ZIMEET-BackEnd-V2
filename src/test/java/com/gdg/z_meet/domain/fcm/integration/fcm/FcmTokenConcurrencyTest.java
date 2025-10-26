@@ -4,6 +4,7 @@ import com.gdg.z_meet.domain.fcm.entity.FcmToken;
 import com.gdg.z_meet.domain.fcm.repository.FcmTokenRepository;
 import com.gdg.z_meet.domain.fcm.service.token.FcmTokenService;
 import com.gdg.z_meet.domain.fcm.service.token.FcmTokenServiceImpl;
+import com.gdg.z_meet.domain.fcm.service.token.FcmTokenTransactionService;
 import com.gdg.z_meet.domain.fcm.unit.config.QueryDslTestConfig;
 import com.gdg.z_meet.domain.user.dto.UserReq;
 import com.gdg.z_meet.domain.user.entity.User;
@@ -34,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import({FcmTokenServiceImpl.class, QueryDslTestConfig.class})
+@Import({FcmTokenServiceImpl.class, FcmTokenTransactionService.class, QueryDslTestConfig.class})
 @Rollback(value = false)
 @DisplayName("FCM 토큰 동시성 통합 테스트")
 class FcmTokenConcurrencyTest {
@@ -55,6 +56,7 @@ class FcmTokenConcurrencyTest {
 
     @BeforeEach
     void setUp() {
+        
         testUser = User.builder()
                 .studentNumber("20192098")
                 .name("동시성테스트")
@@ -144,7 +146,7 @@ class FcmTokenConcurrencyTest {
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @DisplayName("CASE 2: 기존에 토큰이 없는 상태에서 여러 요청이 동시에 insert 시도")
-    void CASE1_기존_토큰_없음_동시_INSERT_시도() throws InterruptedException {
+    void CASE2_기존_토큰_없음_동시_INSERT_시도() throws InterruptedException {
         // DB에 user_id의 FcmToken row가 없는 상태 확인
         List<FcmToken> beforeTokens = fcmTokenRepository.findAllByUser(testUser);
         assertThat(beforeTokens).isEmpty();
