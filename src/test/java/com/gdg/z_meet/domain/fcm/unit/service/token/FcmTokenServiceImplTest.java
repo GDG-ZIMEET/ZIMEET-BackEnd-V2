@@ -142,7 +142,6 @@ class FcmTokenServiceImplTest {
 
         verify(userRepository).findById(1L);
         verify(fcmTokenRepository).findByUserForUpdate(testUser);
-        verify(fcmTokenRepository).flush();
         assertEquals("updated-fcm-token", existingToken.getToken());
     }
 
@@ -204,7 +203,7 @@ class FcmTokenServiceImplTest {
 
         fcmTokenService.syncFcmToken(1L, req);
 
-        verify(fcmTokenRepository).flush();
+        verify(fcmTokenRepository).findByUserForUpdate(testUser);
         assertEquals("new-token-after-update", existingToken.getToken());
     }
 }

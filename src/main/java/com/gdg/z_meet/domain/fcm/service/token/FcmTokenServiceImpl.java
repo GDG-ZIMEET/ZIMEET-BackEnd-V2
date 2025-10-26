@@ -10,9 +10,13 @@ import com.gdg.z_meet.global.response.Code;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +25,9 @@ public class FcmTokenServiceImpl implements FcmTokenService {
 
     private final UserRepository userRepository;
     private final FcmTokenRepository fcmTokenRepository;
+    
+    // 사용자별 동기화를 위한 락 맵
+    private final Map<Long, ReentrantLock> userLocks = new ConcurrentHashMap<>();
 
     /**
      *  FCM 푸시 알림 사용자 동의 여부
@@ -36,11 +43,39 @@ public class FcmTokenServiceImpl implements FcmTokenService {
     }
 
     /**
-     *  FCM 토큰 갱신
+     * FCM 토큰 동기화 (동시성 안전)
+     * 
+     * 동시성 문제 해결 전략:
+     * 1. 사용자별 동기화 락으로 동시성 보장
+     * 2. 사용자 검증 후 단일 트랜잭션에서 처리
+     * 3. findByUserForUpdate로 락 획득하여 토큰 처리
+     * 4. 락이 걸린 상태에서 안전하게 업데이트/생성
      */
     @Override
     @Transactional
     public void syncFcmToken(Long userId, UserReq.saveFcmTokenReq req) {
+        // 사용자별 동기화 락 획득
+        ReentrantLock lock = userLocks.computeIfAbsent(userId, k -> new ReentrantLock());
+        lock.lock();
+
+        try {
+            doSyncFcmToken(userId, req);
+        } finally {
+            lock.unlock();
+
+            // 필요 시 조건부 제거(경합이 없을 때만)
+            if(!lock.isLocked() && !lock.hasQueuedThreads()){
+                userLocks.remove(userId, lock);
+            }
+        }
+    }
+    
+    /**
+     * 실제 FCM 토큰 동기화 로직
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void doSyncFcmToken(Long userId, UserReq.saveFcmTokenReq req) {
+        // 사용자 검증
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(Code.USER_NOT_FOUND));
 
@@ -50,15 +85,17 @@ public class FcmTokenServiceImpl implements FcmTokenService {
 
         String newToken = req.getFcmToken();
 
-        // 기존 토큰 row 조회 시점에 쓰기 락(동일 트랜잭션 읽기, 수정 방지)
+        // 기존 토큰 조회 및 락 획득
         Optional<FcmToken> existingOpt = fcmTokenRepository.findByUserForUpdate(user);
 
         if (existingOpt.isPresent()) {
             FcmToken existing = existingOpt.get();
             // 토큰이 다르면 업데이트
             if (!existing.getToken().equals(newToken)) {
-                existing.setToken(newToken);
-                fcmTokenRepository.flush();
+                existing.updateToken(newToken);
+                log.debug("FCM 토큰 업데이트 완료: userId={}", user.getId());
+            } else {
+                log.debug("FCM 토큰 동일, 업데이트 생략: userId={}", user.getId());
             }
         } else {
             // 없으면 새로 생성
@@ -68,6 +105,7 @@ public class FcmTokenServiceImpl implements FcmTokenService {
                             .token(newToken)
                             .build()
             );
+            log.debug("FCM 토큰 생성 완료: userId={}", user.getId());
         }
     }
 }

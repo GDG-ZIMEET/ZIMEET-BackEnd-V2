@@ -96,7 +96,8 @@ public enum Code implements BaseCode {
 //    FEIGN_CLIENT_ERROR_500(HttpStatus.INTERNAL_SERVER_ERROR, "5001", "Inter server Error in feign client"),
     FCM_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND, "4002", "FCM 토큰을 찾을 수 없습니다."),
     FCM_PUSH_NOT_AGREED(HttpStatus.INTERNAL_SERVER_ERROR, "5002", "알림에 동의하지 않은 사용자입니다."),
-    FCM_SEND_MESSAGE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "5003", "FCM 서버에 메시지 전송 상황에서 에러 발생");
+    FCM_SEND_MESSAGE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "5003", "FCM 서버에 메시지 전송 상황에서 에러 발생"),
+    FCM_TOKEN_SYNC_FAILED(HttpStatus.CONFLICT, "5004", "FCM 토큰 동기화 중 충돌이 발생했습니다. 잠시 후 다시 시도해주세요.");
 
 //    NOT_ACADEMY_EMAIL("EEM-001", "Email is not a university email."),
 //    AUTH_CODE_NOT_MATCH("ATH-001", "Auth code not match."),
