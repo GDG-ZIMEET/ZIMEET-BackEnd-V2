@@ -4,6 +4,7 @@ import com.gdg.z_meet.domain.fcm.entity.FcmToken;
 import com.gdg.z_meet.domain.fcm.repository.FcmTokenRepository;
 import com.gdg.z_meet.domain.fcm.service.token.FcmTokenService;
 import com.gdg.z_meet.domain.fcm.service.token.FcmTokenServiceImpl;
+import com.gdg.z_meet.domain.fcm.service.token.FcmTokenTransactionService;
 import com.gdg.z_meet.domain.fcm.unit.config.QueryDslTestConfig;
 import com.gdg.z_meet.domain.user.dto.UserReq;
 import com.gdg.z_meet.domain.user.entity.User;
@@ -43,7 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import({FcmTokenServiceImpl.class, QueryDslTestConfig.class})
+@Import({FcmTokenServiceImpl.class, FcmTokenTransactionService.class, QueryDslTestConfig.class})
 @Rollback(value = false)
 @DisplayName("ReentrantLock 분할 락 해결 검증 테스트")
 class FcmTokenLockManagementTest {

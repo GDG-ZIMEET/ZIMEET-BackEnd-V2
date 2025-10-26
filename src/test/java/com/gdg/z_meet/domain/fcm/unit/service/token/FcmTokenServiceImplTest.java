@@ -31,6 +31,9 @@ class FcmTokenServiceImplTest {
 
     @Mock
     private FcmTokenRepository fcmTokenRepository;
+    
+    @Mock
+    private com.gdg.z_meet.domain.fcm.service.token.FcmTokenTransactionService fcmTokenTransactionService;
 
     @InjectMocks
     private FcmTokenServiceImpl fcmTokenService;
@@ -115,17 +118,11 @@ class FcmTokenServiceImplTest {
                 .fcmToken("new-fcm-token")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(fcmTokenRepository.findByUserForUpdate(testUser)).thenReturn(Optional.empty());
+        doNothing().when(fcmTokenTransactionService).doSyncFcmToken(1L, req);
 
         fcmTokenService.syncFcmToken(1L, req);
 
-        verify(userRepository).findById(1L);
-        verify(fcmTokenRepository).findByUserForUpdate(testUser);
-        verify(fcmTokenRepository).save(argThat(token ->
-                token.getToken().equals("new-fcm-token") &&
-                        token.getUser().equals(testUser)
-        ));
+        verify(fcmTokenTransactionService).doSyncFcmToken(1L, req);
     }
 
     @Test
@@ -135,14 +132,11 @@ class FcmTokenServiceImplTest {
                 .fcmToken("updated-fcm-token")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(fcmTokenRepository.findByUserForUpdate(testUser)).thenReturn(Optional.of(existingToken));
+        doNothing().when(fcmTokenTransactionService).doSyncFcmToken(1L, req);
 
         fcmTokenService.syncFcmToken(1L, req);
 
-        verify(userRepository).findById(1L);
-        verify(fcmTokenRepository).findByUserForUpdate(testUser);
-        assertEquals("updated-fcm-token", existingToken.getToken());
+        verify(fcmTokenTransactionService).doSyncFcmToken(1L, req);
     }
 
     @Test
@@ -151,7 +145,8 @@ class FcmTokenServiceImplTest {
                 .fcmToken("new-token")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        doThrow(new BusinessException(Code.USER_NOT_FOUND))
+                .when(fcmTokenTransactionService).doSyncFcmToken(1L, req);
 
         BusinessException exception = assertThrows(BusinessException.class,
                 () -> fcmTokenService.syncFcmToken(1L, req));
@@ -165,14 +160,13 @@ class FcmTokenServiceImplTest {
                 .fcmToken("new-token")
                 .build();
 
-        when(userRepository.findById(2L)).thenReturn(Optional.of(noPushUser));
+        doThrow(new BusinessException(Code.FCM_PUSH_NOT_AGREED))
+                .when(fcmTokenTransactionService).doSyncFcmToken(2L, req);
 
         BusinessException exception = assertThrows(BusinessException.class,
                 () -> fcmTokenService.syncFcmToken(2L, req));
 
         assertEquals(Code.FCM_PUSH_NOT_AGREED, exception.getCode());
-        verify(fcmTokenRepository, never()).findByUserForUpdate(any());
-        verify(fcmTokenRepository, never()).save(any());
     }
 
     @Test
@@ -182,13 +176,11 @@ class FcmTokenServiceImplTest {
                 .fcmToken("concurrent-token")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(fcmTokenRepository.findByUserForUpdate(testUser)).thenReturn(Optional.empty());
+        doNothing().when(fcmTokenTransactionService).doSyncFcmToken(1L, req);
 
         fcmTokenService.syncFcmToken(1L, req);
 
-        verify(fcmTokenRepository).findByUserForUpdate(testUser);
-        verify(fcmTokenRepository, times(1)).save(any(FcmToken.class));
+        verify(fcmTokenTransactionService).doSyncFcmToken(1L, req);
     }
 
     @Test
@@ -198,12 +190,10 @@ class FcmTokenServiceImplTest {
                 .fcmToken("new-token-after-update")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(fcmTokenRepository.findByUserForUpdate(testUser)).thenReturn(Optional.of(existingToken));
+        doNothing().when(fcmTokenTransactionService).doSyncFcmToken(1L, req);
 
         fcmTokenService.syncFcmToken(1L, req);
 
-        verify(fcmTokenRepository).findByUserForUpdate(testUser);
-        assertEquals("new-token-after-update", existingToken.getToken());
+        verify(fcmTokenTransactionService).doSyncFcmToken(1L, req);
     }
 }
