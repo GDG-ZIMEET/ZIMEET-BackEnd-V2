@@ -25,5 +25,18 @@ public enum ProductType {
         }
         return false;
     }
+
+    /**
+     * 총 금액으로부터 증분 수량 계산
+     * @param totalPrice 총 금액
+     * @return 증분 수량
+     */
+    public int calculateIncreaseAmount(Long totalPrice) {
+        return this.priceMap.entrySet().stream()
+                .filter(entry -> entry.getValue().equals(totalPrice.intValue()))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Invalid total price: " + totalPrice));
+    }
 }
 

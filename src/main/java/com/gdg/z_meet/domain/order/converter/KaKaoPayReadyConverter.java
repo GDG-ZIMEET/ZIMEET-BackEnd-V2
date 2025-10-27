@@ -1,7 +1,7 @@
 package com.gdg.z_meet.domain.order.converter;
 
 import com.gdg.z_meet.domain.order.dto.KaKaoPayReadyDTO;
-import com.gdg.z_meet.domain.order.entity.KaKaoPayData;
+import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.order.entity.ProductType;
 import com.gdg.z_meet.domain.user.entity.User;
 
@@ -15,19 +15,19 @@ public class KaKaoPayReadyConverter {
                 .teamId(request.getTeamId())
                 .productType(request.getProductType())
                 .totalPrice(request.getTotalPrice())
-                .vat(request.getTotalPrice()/10)     // 과세 10%
+                .vat(request.getTotalPrice() * 10 / 11)     // 과세 10% (부가세 포함 가격에서 부가세 계산)
                 .build();
     }
 
 
     // 결제 정보 변환
-    public static KaKaoPayData toKakaoPayData(KaKaoPayReadyDTO.KakaoApiResponse kakaoApiResponse,
-                                              KaKaoPayReadyDTO.Parameter parameter,  String orderId, User buyer) {
+    public static KakaoPayData toKakaoPayData(KaKaoPayReadyDTO.KakaoApiResponse kakaoApiResponse,
+                                              KaKaoPayReadyDTO.Parameter parameter, String orderId, User buyer) {
 
-        // productType, totalPrice 추가
-        return KaKaoPayData.builder()
+        return KakaoPayData.builder()
                 .orderId(orderId)
                 .tid(kakaoApiResponse.getTid())
+                .status(com.gdg.z_meet.domain.order.entity.PaymentStatus.PREPARED)
                 .productType(ProductType.valueOf(parameter.getProductType()))
                 .totalPrice(parameter.getTotalPrice())
                 .buyer(buyer)
