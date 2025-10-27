@@ -7,12 +7,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Getter
-@Setter
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
-public class KaKaoPayData extends BaseEntity {
+public class KakaoPayData extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,4 +46,24 @@ public class KaKaoPayData extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "item_id")
     private ItemPurchase itemPurchase;
+
+    // Getter methods
+    public Long getId() { return id; }
+    public String getOrderId() { return orderId; }
+    public String getTid() { return tid; }
+    public PaymentStatus getStatus() { return status; }
+    public ProductType getProductType() { return productType; }
+    public Long getTotalPrice() { return totalPrice; }
+    public User getBuyer() { return buyer; }
+    public ItemPurchase getItemPurchase() { return itemPurchase; }
+
+    // Setter methods
+    public void setId(Long id) { this.id = id; }
+    public void setOrderId(String orderId) { this.orderId = orderId; }
+    public void setTid(String tid) { this.tid = tid; }
+    public void setStatus(PaymentStatus status) { this.status = status; }
+    public void setProductType(ProductType productType) { this.productType = productType; }
+    public void setTotalPrice(Long totalPrice) { this.totalPrice = totalPrice; }
+    public void setBuyer(User buyer) { this.buyer = buyer; }
+    public void setItemPurchase(ItemPurchase itemPurchase) { this.itemPurchase = itemPurchase; }
 }

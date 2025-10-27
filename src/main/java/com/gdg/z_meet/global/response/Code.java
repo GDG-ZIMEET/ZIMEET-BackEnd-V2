@@ -79,6 +79,12 @@ public enum Code implements BaseCode {
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "PAYMENT_4004", "결제 정보를 찾을 수 없습니다."),
     KAKAO_API_INVALID_BUYER(HttpStatus.BAD_REQUEST, "KAKAO_4001", "결제자 정보가 일치하지 않습니다."),
     INVALID_TOTAL_PRICE(HttpStatus.BAD_REQUEST, "PRICE_4000", "잘못된 결제 금액입니다."),
+    
+    // Idempotency 관련 에러
+    IDEMPOTENCY_KEY_REQUIRED(HttpStatus.BAD_REQUEST, "IDEMP_4000", "멱등성 키가 필요합니다."),
+    IDEMPOTENCY_KEY_INVALID(HttpStatus.BAD_REQUEST, "IDEMP_4001", "멱등성 키 형식이 올바르지 않습니다."),
+    IDEMPOTENCY_CONFLICT(HttpStatus.CONFLICT, "IDEMP_4090", "이전 요청이 아직 처리 중입니다. 잠시 후 다시 시도해주세요."),
+    IDEMPOTENCY_PAYLOAD_MISMATCH(HttpStatus.UNPROCESSABLE_ENTITY, "IDEMP_4220", "요청 본문이 이전 요청과 다릅니다."),
 
     USER_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "U001", "이미 가입된 학번 또는 닉네임입니다."),
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "U002", "비밀번호가 유효하지 않습니다."),

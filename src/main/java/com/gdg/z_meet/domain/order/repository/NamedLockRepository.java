@@ -1,17 +1,18 @@
 package com.gdg.z_meet.domain.order.repository;
 
-import com.gdg.z_meet.domain.order.entity.ItemPurchase;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+public interface NamedLockRepository {
 
-public interface NamedLockRepository extends JpaRepository<ItemPurchase, Long> {
+    /**
+     * 네임드 락 할당
+     * @param lockName 락 이름
+     * @return 락 획득 결과 (1: 성공, 0: 실패, null: 에러)
+     */
+    Integer getLock(String lockName);
 
-    // 네임드 락 할당
-    @Query(value = "SELECT GET_LOCK(:lockName, 10)", nativeQuery = true)
-    Integer getLock(@Param("lockName") String lockName);
-
-    // 네임드 락 해제
-    @Query(value = "SELECT RELEASE_LOCK(:lockName)", nativeQuery = true)
-    Integer releaseLock(@Param("lockName") String lockName);
+    /**
+     * 네임드 락 해제
+     * @param lockName 락 이름
+     * @return 락 해제 결과
+     */
+    Integer releaseLock(String lockName);
 }

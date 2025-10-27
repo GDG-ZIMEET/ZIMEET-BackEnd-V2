@@ -2,7 +2,7 @@ package com.gdg.z_meet.domain.order.client;
 
 import com.gdg.z_meet.domain.order.dto.KaKaoPayApproveDTO;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayReadyDTO;
-import com.gdg.z_meet.domain.order.entity.KaKaoPayData;
+import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -94,7 +94,7 @@ public class KaKaoPayApiClient {
     // parameter : userId, pgToken, orderId
     // kakaoPayData : orderId, tid, buyer
     public Optional<KaKaoPayApproveDTO.KaKaoApiResponse> requestPaymentApprove(
-            KaKaoPayApproveDTO.Parameter parameter, KaKaoPayData kakaoPayData) {
+            KaKaoPayApproveDTO.Parameter parameter, KakaoPayData kakaoPayData) {
 
         try {
             Map<String, String> parameters = getApproveParams(parameter, kakaoPayData);
@@ -116,7 +116,7 @@ public class KaKaoPayApiClient {
     }
 
     // 결제 승인 파라미터 생성 (카카오 페이 DB tid 기반)
-    private Map<String, String> getApproveParams(KaKaoPayApproveDTO.Parameter parameter, KaKaoPayData kakaoPayData) {
+    private Map<String, String> getApproveParams(KaKaoPayApproveDTO.Parameter parameter, KakaoPayData kakaoPayData) {
 
         Map<String, String> params = new HashMap<>();
 
