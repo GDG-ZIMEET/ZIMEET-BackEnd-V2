@@ -4,6 +4,7 @@ import com.gdg.z_meet.domain.order.dto.KaKaoPayApproveDTO;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayReadyDTO;
 import com.gdg.z_meet.domain.order.entity.KaKaoPayData;
 import com.gdg.z_meet.domain.user.entity.User;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -14,38 +15,55 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class KaKaoPayApiClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${kakao.pay.ready-url}")
     private String READY_URL;
+    
     @Value("${kakao.pay.approve-url}")
     private String APPROVE_URL;
-
+    
     @Value("${kakao.pay.cid}")
     private String cid;
+    
     @Value("${kakao.pay.secret-key}")
     private String secretKey;
+    
+    @Value("${kakao.pay.approval-url}")
+    private String approvalUrl;
+    
+    @Value("${kakao.pay.cancel-url}")
+    private String cancelUrl;
+    
+    @Value("${kakao.pay.fail-url}")
+    private String failUrl;
 
     // 카카오 페이 결제 준비 API
-    public KaKaoPayReadyDTO.KakaoApiResponse requestPaymentReady(
+    public Optional<KaKaoPayReadyDTO.KakaoApiResponse> requestPaymentReady(
             KaKaoPayReadyDTO.Parameter parameter, String orderId, User buyer) {
 
-        Map<String, String> parameters = getReadyParams(parameter, orderId, buyer);
+        try {
+            Map<String, String> parameters = getReadyParams(parameter, orderId, buyer);
+            
+            HttpHeaders headers = getHeaders();
+            HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(parameters, headers);
 
-        HttpHeaders headers = getHeaders();
-        HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(parameters, headers);
+            ResponseEntity<KaKaoPayReadyDTO.KakaoApiResponse> response = restTemplate.postForEntity(
+                    READY_URL, requestEntity, KaKaoPayReadyDTO.KakaoApiResponse.class
+            );
 
-        ResponseEntity<KaKaoPayReadyDTO.KakaoApiResponse> response = restTemplate.postForEntity(
-                READY_URL, requestEntity, KaKaoPayReadyDTO.KakaoApiResponse.class
-        );
-
-        // 카카오 서버 응답 반환 (tid)
-        return response.getBody();
+            return Optional.ofNullable(response.getBody());
+        } catch (Exception e) {
+            log.error("카카오페이 결제 준비 API 호출 실패: {}", e.getMessage());
+            return Optional.empty();
+        }
     }
 
     // 카카오 페이 서버에 보낼 요청 파라미터 구성
@@ -62,11 +80,11 @@ public class KaKaoPayApiClient {
         params.put("tax_free_amount", "0");         // 비과세 대상 없음
         params.put("vat_amount", String.valueOf(parameter.getVat()));     // 일반적으로 10%
         params.put("approval_url",
-                "http://localhost:3000/purchase/approve?productType=" + parameter.getProductType() + "&orderId=" + orderId);
+                approvalUrl + "?productType=" + parameter.getProductType() + "&orderId=" + orderId);
         params.put("cancel_url",
-                "http://localhost:3000/purchase/cancel?orderId=" + orderId);
+                cancelUrl + "?orderId=" + orderId);
         params.put("fail_url",
-                "http://localhost:3000/purchase/fail?orderId=" + orderId);
+                failUrl + "?orderId=" + orderId);
 
         return params;
     }
@@ -75,21 +93,26 @@ public class KaKaoPayApiClient {
     // 카카오페이 결제 승인 API
     // parameter : userId, pgToken, orderId
     // kakaoPayData : orderId, tid, buyer
-    public KaKaoPayApproveDTO.KaKaoApiResponse requestPaymentApprove(
+    public Optional<KaKaoPayApproveDTO.KaKaoApiResponse> requestPaymentApprove(
             KaKaoPayApproveDTO.Parameter parameter, KaKaoPayData kakaoPayData) {
 
-        Map<String, String> parameters = getApproveParams(parameter, kakaoPayData);
+        try {
+            Map<String, String> parameters = getApproveParams(parameter, kakaoPayData);
+            
+            HttpHeaders headers = getHeaders();
+            HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(parameters, headers);
 
-        HttpHeaders headers = getHeaders();
-        HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(parameters, headers);
+            ResponseEntity<KaKaoPayApproveDTO.KaKaoApiResponse> response = restTemplate.postForEntity(
+                    APPROVE_URL, requestEntity, KaKaoPayApproveDTO.KaKaoApiResponse.class
+            );
 
-        ResponseEntity<KaKaoPayApproveDTO.KaKaoApiResponse> response = restTemplate.postForEntity(
-                APPROVE_URL, requestEntity, KaKaoPayApproveDTO.KaKaoApiResponse.class
-        );
-
-        log.info("KaKaoPay API Response: {}", response.getBody());
-
-        return response.getBody();
+            log.info("KaKaoPay API Response: {}", response.getBody());
+            
+            return Optional.ofNullable(response.getBody());
+        } catch (Exception e) {
+            log.error("카카오페이 결제 승인 API 호출 실패: {}", e.getMessage());
+            return Optional.empty();
+        }
     }
 
     // 결제 승인 파라미터 생성 (카카오 페이 DB tid 기반)
