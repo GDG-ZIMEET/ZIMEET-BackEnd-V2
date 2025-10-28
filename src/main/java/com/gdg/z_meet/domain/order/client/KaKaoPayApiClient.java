@@ -47,11 +47,6 @@ public class KaKaoPayApiClient {
     @Value("${kakao.pay.fail-url}")
     private String failUrl;
 
-    @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder.build();
-    }
-
     // 카카오 페이 결제 준비 API
     public Optional<KaKaoPayReadyDTO.KakaoApiResponse> requestPaymentReady(
             KaKaoPayReadyDTO.Parameter parameter, String orderId, User buyer) {

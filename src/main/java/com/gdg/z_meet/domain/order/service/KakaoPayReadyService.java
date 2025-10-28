@@ -31,9 +31,10 @@ public class KakaoPayReadyService {
 
     @Transactional
     public KaKaoPayReadyDTO.Response ready(KaKaoPayReadyDTO.Parameter parameter, String idempotencyKey) {
+        String namespacedKey = null;
         try {
             // 멱등성 키 네임스페이스: userId:idempotencyKey
-            String namespacedKey = (idempotencyKey == null || idempotencyKey.isEmpty())
+            namespacedKey = (idempotencyKey == null || idempotencyKey.isEmpty())
                     ? idempotencyKey
                     : (parameter.getBuyerId() + ":" + idempotencyKey);
             
@@ -80,7 +81,6 @@ public class KakaoPayReadyService {
         } finally {
             // 멱등성 처리 중 표시 해제
             if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
-                String namespacedKey = parameter.getBuyerId() + ":" + idempotencyKey;
                 kakaoPayIdempotencyService.unmarkAsProcessing(namespacedKey);
             }
         }
