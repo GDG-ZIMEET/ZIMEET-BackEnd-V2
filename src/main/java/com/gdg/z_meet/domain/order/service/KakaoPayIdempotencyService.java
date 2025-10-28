@@ -46,16 +46,13 @@ public class KakaoPayIdempotencyService {
             return IdempotencyValidationResult.cached(cachedResponse);
         }
 
-        // 409: 처리 중인 요청 확인
-        if (isProcessing(key)) {
+        // SETNX 로 원자적 처리 중 표시 및 경합 상태 해결
+        if (!markAsProcessing(key)) {
             log.warn("동일한 요청이 처리 중입니다 - 멱등성 키: {}", key);
             throw new BusinessException(Code.IDEMPOTENCY_CONFLICT);
         }
 
-        // 새로운 요청으로 표시
-        markAsProcessing(key);
         cachePayload(key, payload);
-
         return IdempotencyValidationResult.processing();
     }
 
@@ -141,35 +138,26 @@ public class KakaoPayIdempotencyService {
     }
 
     /**
-     * 처리 중인 요청인지 확인
+     * 멱등 처리 중임을 표시하는 메서드
+     * @param key 멱등성 키
+     * @return SETNX 성공 여부 (true: 성공, false: 이미 처리 중)
      */
-    private boolean isProcessing(String key) {
+    private boolean markAsProcessing(String key) {
         if (key == null || key.isEmpty()) {
             return false;
         }
 
         String processingKey = PROCESSING_KEY_PREFIX + key;
-        Boolean exists = redisTemplate.hasKey(processingKey);
-        return Boolean.TRUE.equals(exists);
-    }
-
-    /**
-     * 요청을 처리 중으로 표시 (SETNX를 사용한 원자적 연산)
-     */
-    private void markAsProcessing(String key) {
-        if (key == null || key.isEmpty()) {
-            return;
-        }
-
-        String processingKey = PROCESSING_KEY_PREFIX + key;
         
-        // SETNX with TTL: 키가 없을 때만 설정하고 TTL을 동시에 적용 (완전 원자적 연산)
+        // 아직 처리 중 표시가 없으면 새로 표시하고, 이미 있으면 중복 요청으로 간주
         Boolean setIfAbsent = redisTemplate.opsForValue().setIfAbsent(processingKey, "processing", PROCESSING_TTL);
         
         if (Boolean.TRUE.equals(setIfAbsent)) {
             log.debug("요청 처리 시작 - 멱등성 키: {}", key);
+            return true;
         } else {
             log.warn("이미 처리 중인 요청 - 멱등성 키: {}", key);
+            return false;
         }
     }
 

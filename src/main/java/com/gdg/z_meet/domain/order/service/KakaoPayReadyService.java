@@ -31,11 +31,16 @@ public class KakaoPayReadyService {
 
     @Transactional
     public KaKaoPayReadyDTO.Response ready(KaKaoPayReadyDTO.Parameter parameter, String idempotencyKey) {
-
+        String namespacedKey = null;
         try {
+            // 멱등성 키 네임스페이스: userId:idempotencyKey
+            namespacedKey = (idempotencyKey == null || idempotencyKey.isEmpty())
+                    ? idempotencyKey
+                    : (parameter.getBuyerId() + ":" + idempotencyKey);
+            
             // 멱등성 키 검증
             String currentPayload = parameter.getTeamId() + ":" + parameter.getProductType() + ":" + parameter.getTotalPrice();
-            var validationResult = kakaoPayIdempotencyService.validate(idempotencyKey, currentPayload);
+            var validationResult = kakaoPayIdempotencyService.validate(namespacedKey, currentPayload);
             
             if (validationResult.isCached()) {
                 return (KaKaoPayReadyDTO.Response) validationResult.getCachedResponse();
@@ -69,14 +74,14 @@ public class KakaoPayReadyService {
 
             // 응답 캐시
             if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
-                kakaoPayIdempotencyService.cacheResponse(idempotencyKey, response);
+                kakaoPayIdempotencyService.cacheResponse(namespacedKey, response);
             }
 
             return response;
         } finally {
             // 멱등성 처리 중 표시 해제
             if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
-                kakaoPayIdempotencyService.unmarkAsProcessing(idempotencyKey);
+                kakaoPayIdempotencyService.unmarkAsProcessing(namespacedKey);
             }
         }
     }
@@ -102,4 +107,3 @@ public class KakaoPayReadyService {
         return UUID.randomUUID().toString();
     }
 }
-
