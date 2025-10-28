@@ -138,7 +138,7 @@ public class KakaoPayIdempotencyService {
     }
 
     /**
-     * 요청을 처리 중으로 표시 (SETNX를 사용한 원자적 연산)
+     * 멱등 처리 중임을 표시하는 메서드
      * @param key 멱등성 키
      * @return SETNX 성공 여부 (true: 성공, false: 이미 처리 중)
      */
@@ -149,7 +149,7 @@ public class KakaoPayIdempotencyService {
 
         String processingKey = PROCESSING_KEY_PREFIX + key;
         
-        // SETNX with TTL: 키가 없을 때만 설정하고 TTL을 동시에 적용 (완전 원자적 연산)
+        // 아직 처리 중 표시가 없으면 새로 표시하고, 이미 있으면 중복 요청으로 간주
         Boolean setIfAbsent = redisTemplate.opsForValue().setIfAbsent(processingKey, "processing", PROCESSING_TTL);
         
         if (Boolean.TRUE.equals(setIfAbsent)) {

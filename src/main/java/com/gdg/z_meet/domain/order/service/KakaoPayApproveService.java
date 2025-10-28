@@ -36,9 +36,12 @@ public class KakaoPayApproveService {
         String lockName = null;
 
         try {
-            // 멱등성 키 검증 (공통 로직)
+            // 멱등성 키 네임스페이스: userId:idempotencyKey
             String currentPayload = parameter.getOrderId() + ":" + parameter.getPgToken();
-            var validationResult = kakaoPayIdempotencyService.validate(idempotencyKey, currentPayload);
+            String namespacedKey = (idempotencyKey == null || idempotencyKey.isEmpty())
+                    ? idempotencyKey
+                    : (parameter.getUserId() + ":" + idempotencyKey);
+            var validationResult = kakaoPayIdempotencyService.validate(namespacedKey, currentPayload);
             
             if (validationResult.isCached()) {
                 return (KaKaoPayApproveDTO.Response) validationResult.getCachedResponse();
@@ -85,6 +88,7 @@ public class KakaoPayApproveService {
             ItemPurchase itemPurchase = KaKaoPayApproveConverter.toItemPurchase(
                     kakaoApiResponse, kakaoPayData, buyer, processResult.team(), processResult.userProfile());
             itemPurchaseRepository.save(itemPurchase);
+            kakaoPayData.setItemPurchase(itemPurchase);
 
             // 5. 결제 상태 업데이트 (승인 완료)
             kakaoPayData.setStatus(PaymentStatus.APPROVED);
@@ -94,7 +98,7 @@ public class KakaoPayApproveService {
 
             // 응답 캐시
             if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
-                kakaoPayIdempotencyService.cacheResponse(idempotencyKey, response);
+                kakaoPayIdempotencyService.cacheResponse(namespacedKey, response);
             }
 
             return response;
