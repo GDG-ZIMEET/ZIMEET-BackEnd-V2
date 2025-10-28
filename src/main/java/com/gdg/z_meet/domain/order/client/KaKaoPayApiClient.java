@@ -7,6 +7,8 @@ import com.gdg.z_meet.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +46,11 @@ public class KaKaoPayApiClient {
     
     @Value("${kakao.pay.fail-url}")
     private String failUrl;
+
+    @Bean
+    public RestTemplate restTemplate(RestTemplateBuilder builder) {
+        return builder.build();
+    }
 
     // 카카오 페이 결제 준비 API
     public Optional<KaKaoPayReadyDTO.KakaoApiResponse> requestPaymentReady(
