@@ -29,6 +29,7 @@ class KakaoPayIdempotencyServiceTest {
 
     private KakaoPayIdempotencyService idempotencyService;
     private static final String TEST_IDEMPOTENCY_KEY = "test-key-123";
+    private static final String TEST_NAMESPACED_KEY = "userId123:test-key-123";
     private static final String TEST_PAYLOAD = "orderId:pgToken";
 
     @BeforeEach
@@ -163,7 +164,8 @@ class KakaoPayIdempotencyServiceTest {
         // given
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get(anyString())).thenReturn(null);
-        when(redisTemplate.hasKey("processing:test-key-123")).thenReturn(true);
+        // SETNX 실패 (false 반환 = 이미 처리 중)
+        when(redisTemplate.opsForValue().setIfAbsent(anyString(), any(), any(Duration.class))).thenReturn(false);
 
         // when & then
         assertThatThrownBy(() -> idempotencyService.validate(TEST_IDEMPOTENCY_KEY, TEST_PAYLOAD))
@@ -180,7 +182,6 @@ class KakaoPayIdempotencyServiceTest {
         // given
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get(anyString())).thenReturn(null);
-        when(redisTemplate.hasKey(anyString())).thenReturn(false);
         // SETNX 성공 (true 반환)
         when(redisTemplate.opsForValue().setIfAbsent(anyString(), any(), any(Duration.class))).thenReturn(true);
 
@@ -198,16 +199,74 @@ class KakaoPayIdempotencyServiceTest {
         // given
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get(anyString())).thenReturn(null);
-        when(redisTemplate.hasKey(anyString())).thenReturn(false);
         // SETNX 실패 (false 반환 = 이미 설정됨)
         when(redisTemplate.opsForValue().setIfAbsent(anyString(), any(), any(Duration.class))).thenReturn(false);
 
+        // when & then
+        assertThatThrownBy(() -> idempotencyService.validate(TEST_IDEMPOTENCY_KEY, TEST_PAYLOAD))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException be = (BusinessException) exception;
+                    assertThat(be.getCode()).isEqualTo(Code.IDEMPOTENCY_CONFLICT);
+                });
+    }
+
+    @Test
+    @DisplayName("네임스페이스 포함 멱등성 키 - 정상 처리")
+    void 네임스페이스_포함_멱등성_키_정상_처리() {
+        // given
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn(null);
+        when(redisTemplate.opsForValue().setIfAbsent(anyString(), any(), any(Duration.class))).thenReturn(true);
+
         // when
-        var result = idempotencyService.validate(TEST_IDEMPOTENCY_KEY, TEST_PAYLOAD);
+        var result = idempotencyService.validate(TEST_NAMESPACED_KEY, TEST_PAYLOAD);
 
         // then
         assertThat(result.isProcessing()).isTrue();
-        verify(redisTemplate.opsForValue()).setIfAbsent(anyString(), any(), any(Duration.class));
+        verify(redisTemplate.opsForValue()).setIfAbsent(eq("processing:userId123:test-key-123"), eq("processing"), eq(Duration.ofMinutes(5)));
+    }
+
+    @Test
+    @DisplayName("네임스페이스 포함 멱등성 키 - 캐시된 응답 반환")
+    void 네임스페이스_포함_멱등성_키_캐시된_응답_반환() {
+        // given
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        Object cachedResponse = "cached-response";
+        
+        when(valueOperations.get(anyString()))
+                .thenReturn(null)  // 첫 번째: idempotency:userId123:test-key-123:payload (null)
+                .thenReturn(cachedResponse);  // 두 번째: idempotency:userId123:test-key-123 (캐시된 응답)
+
+        // when
+        var result = idempotencyService.validate(TEST_NAMESPACED_KEY, TEST_PAYLOAD);
+
+        // then
+        assertThat(result.isCached()).isTrue();
+        assertThat(result.getCachedResponse()).isEqualTo(cachedResponse);
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 동일한 멱등성 키 - 충돌 없음")
+    void 다른_사용자의_동일한_멱등성_키_충돌_없음() {
+        // given
+        String anotherUserKey = "userId456:test-key-123";
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn(null);
+        when(redisTemplate.opsForValue().setIfAbsent(anyString(), any(), any(Duration.class))).thenReturn(true);
+
+        // when - 첫 번째 사용자
+        var result1 = idempotencyService.validate(TEST_NAMESPACED_KEY, TEST_PAYLOAD);
+        
+        // when - 두 번째 사용자
+        var result2 = idempotencyService.validate(anotherUserKey, TEST_PAYLOAD);
+
+        // then - 두 요청 모두 성공
+        assertThat(result1.isProcessing()).isTrue();
+        assertThat(result2.isProcessing()).isTrue();
+        // 서로 다른 키로 저장됨
+        verify(redisTemplate.opsForValue()).setIfAbsent(eq("processing:userId123:test-key-123"), any(), any());
+        verify(redisTemplate.opsForValue()).setIfAbsent(eq("processing:userId456:test-key-123"), any(), any());
     }
 }
 

@@ -46,16 +46,13 @@ public class KakaoPayIdempotencyService {
             return IdempotencyValidationResult.cached(cachedResponse);
         }
 
-        // 409: 처리 중인 요청 확인
-        if (isProcessing(key)) {
+        // SETNX 로 원자적 처리 중 표시 및 경합 상태 해결
+        if (!markAsProcessing(key)) {
             log.warn("동일한 요청이 처리 중입니다 - 멱등성 키: {}", key);
             throw new BusinessException(Code.IDEMPOTENCY_CONFLICT);
         }
 
-        // 새로운 요청으로 표시
-        markAsProcessing(key);
         cachePayload(key, payload);
-
         return IdempotencyValidationResult.processing();
     }
 
@@ -141,24 +138,13 @@ public class KakaoPayIdempotencyService {
     }
 
     /**
-     * 처리 중인 요청인지 확인
+     * 요청을 처리 중으로 표시 (SETNX를 사용한 원자적 연산)
+     * @param key 멱등성 키
+     * @return SETNX 성공 여부 (true: 성공, false: 이미 처리 중)
      */
-    private boolean isProcessing(String key) {
+    private boolean markAsProcessing(String key) {
         if (key == null || key.isEmpty()) {
             return false;
-        }
-
-        String processingKey = PROCESSING_KEY_PREFIX + key;
-        Boolean exists = redisTemplate.hasKey(processingKey);
-        return Boolean.TRUE.equals(exists);
-    }
-
-    /**
-     * 요청을 처리 중으로 표시 (SETNX를 사용한 원자적 연산)
-     */
-    private void markAsProcessing(String key) {
-        if (key == null || key.isEmpty()) {
-            return;
         }
 
         String processingKey = PROCESSING_KEY_PREFIX + key;
@@ -168,8 +154,10 @@ public class KakaoPayIdempotencyService {
         
         if (Boolean.TRUE.equals(setIfAbsent)) {
             log.debug("요청 처리 시작 - 멱등성 키: {}", key);
+            return true;
         } else {
             log.warn("이미 처리 중인 요청 - 멱등성 키: {}", key);
+            return false;
         }
     }
 
