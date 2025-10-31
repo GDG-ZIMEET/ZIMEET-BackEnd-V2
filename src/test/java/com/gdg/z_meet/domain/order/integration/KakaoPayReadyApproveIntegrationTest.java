@@ -27,6 +27,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import com.gdg.z_meet.domain.chat.repository.mongo.MessageRepository;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 import java.util.Optional;
 
@@ -53,16 +57,33 @@ class KakaoPayReadyApproveIntegrationTest {
     @MockBean private KakaoPayIdempotencyService kakaoPayIdempotencyService;
     @MockBean private KakaoPayLockMonitoringService kakaoPayLockMonitoringService;
 
-    // Provide mocks to satisfy RabbitMqConfig bean dependencies in test context
+    // Provide mocks to satisfy external dependencies in test context
     @MockBean
     private ConnectionFactory connectionFactory;
     @MockBean
     private RabbitTemplate rabbitTemplate;
+    @MockBean
+    private RedisTemplate<String, Object> redisTemplate;
+    @MockBean
+    private MongoTemplate mongoTemplate;
+    @MockBean
+    private MessageRepository messageRepository;
+    @MockBean
+    private RedisMessageListenerContainer redisMessageListenerContainer;
 
     private User buyer;
 
     @BeforeEach
     void setUp() {
+        // Mock RedisTemplate operations to prevent NPE in ChatRoomCommandService.initRandomChatIdRedis()
+        org.mockito.Mockito.when(redisTemplate.hasKey(org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(false);
+        org.springframework.data.redis.core.ValueOperations<String, Object> valueOps = 
+                org.mockito.Mockito.mock(org.springframework.data.redis.core.ValueOperations.class);
+        org.mockito.Mockito.when(redisTemplate.opsForValue())
+                .thenReturn(valueOps);
+        org.mockito.Mockito.doNothing().when(valueOps).set(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any());
+        
         String uniqueId = String.valueOf(System.currentTimeMillis());
         buyer = userRepository.saveAndFlush(User.builder()
                 .studentNumber("20250002" + uniqueId)

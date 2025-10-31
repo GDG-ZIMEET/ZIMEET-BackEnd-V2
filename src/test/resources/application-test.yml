@@ -19,16 +19,13 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     defer-datasource-initialization: false
 
-  data:
-    redis:
-      host: localhost
-      port: 6379
-
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration
       - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
 
   cache:
     type: caffeine
