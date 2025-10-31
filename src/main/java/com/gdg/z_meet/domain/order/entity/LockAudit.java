@@ -1,8 +1,10 @@
 package com.gdg.z_meet.domain.order.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.Instant;
 
@@ -11,10 +13,18 @@ import java.time.Instant;
  * 락 획득/해제/타임아웃/실패 이벤트를 추적하기 위한 테이블
  */
 @Entity
-@Table(name = "lock_audit")
+@Table(name = "lock_audit",
+indexes = {
+        @Index(name = "idx_lock_name", columnList = "lock_name"),
+        @Index(name = "idx_owner_id", columnList = "owner_id"),
+        @Index(name = "idx_created_at", columnList = "created_at"),
+        @Index(name = "idx_lock_name_created_at", columnList = "lock_name, created_at")
+    }
+)
 @Getter
+@Setter
 @NoArgsConstructor
-@lombok.Setter
+@AllArgsConstructor
 public class LockAudit {
 
     @Id
@@ -37,10 +47,10 @@ public class LockAudit {
     private Instant releasedAt;
 
     @Column(name = "wait_ms")
-    private Integer waitMs;
+    private Long waitMs;
 
     @Column(name = "hold_ms")
-    private Integer holdMs;
+    private Long holdMs;
 
     @Column(name = "error_message", length = 500)
     private String errorMessage;

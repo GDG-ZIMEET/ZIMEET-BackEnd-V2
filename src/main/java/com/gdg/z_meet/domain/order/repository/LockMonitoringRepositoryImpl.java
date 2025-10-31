@@ -19,7 +19,7 @@ public class LockMonitoringRepositoryImpl implements LockMonitoringRepository {
         audit.setOwnerId(ownerId);
         audit.setEvent("ACQUIRED");
         audit.setAcquiredAt(acquiredAt);
-        audit.setWaitMs(waitMs);
+        audit.setWaitMs(waitMs != null ? waitMs.longValue() : null);
         audit.setCreatedAt(Instant.now());
         lockAuditRepository.save(audit);
         return 1;
@@ -32,7 +32,7 @@ public class LockMonitoringRepositoryImpl implements LockMonitoringRepository {
         audit.setOwnerId(ownerId);
         audit.setEvent("RELEASED");
         audit.setReleasedAt(releasedAt);
-        audit.setHoldMs(holdMs);
+        audit.setHoldMs(holdMs != null ? holdMs.longValue() : null);
         audit.setCreatedAt(Instant.now());
         lockAuditRepository.save(audit);
         return 1;
@@ -44,7 +44,7 @@ public class LockMonitoringRepositoryImpl implements LockMonitoringRepository {
         audit.setLockName(lockName);
         audit.setOwnerId(ownerId);
         audit.setEvent("TIMEOUT");
-        audit.setWaitMs(waitMs);
+        audit.setWaitMs(waitMs != null ? waitMs.longValue() : null);
         audit.setCreatedAt(Instant.now());
         lockAuditRepository.save(audit);
         return 1;
