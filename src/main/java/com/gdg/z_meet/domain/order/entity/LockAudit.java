@@ -18,7 +18,7 @@ indexes = {
         @Index(name = "idx_lock_name", columnList = "lock_name"),
         @Index(name = "idx_owner_id", columnList = "owner_id"),
         @Index(name = "idx_created_at", columnList = "created_at"),
-        @Index(name = "idx_lock_name_created_at", columnList = "lock_name, created_at")
+        @Index(name = "idx_lock_name_created_at", columnList = "lock_name,created_at")
     }
 )
 @Getter
