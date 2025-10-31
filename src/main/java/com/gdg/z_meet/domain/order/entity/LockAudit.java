@@ -14,6 +14,7 @@ import java.time.Instant;
 @Table(name = "lock_audit")
 @Getter
 @NoArgsConstructor
+@lombok.Setter
 public class LockAudit {
 
     @Id
@@ -40,6 +41,9 @@ public class LockAudit {
 
     @Column(name = "hold_ms")
     private Integer holdMs;
+
+    @Column(name = "error_message", length = 500)
+    private String errorMessage;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
