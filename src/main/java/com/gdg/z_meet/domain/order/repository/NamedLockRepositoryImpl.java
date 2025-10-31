@@ -15,13 +15,24 @@ public class NamedLockRepositoryImpl implements NamedLockRepository {
     public Integer getLock(String lockName) {
         Query query = entityManager.createNativeQuery("SELECT GET_LOCK(?, 10)");
         query.setParameter(1, lockName);
-        return (Integer) query.getSingleResult();
+        Object result = query.getSingleResult();
+        return result == null ? null : ((Number) result).intValue();
+    }
+
+    @Override
+    public Integer getLock(String lockName, int timeoutSeconds) {
+        Query query = entityManager.createNativeQuery("SELECT GET_LOCK(?, ?)");
+        query.setParameter(1, lockName);
+        query.setParameter(2, timeoutSeconds);
+        Object result = query.getSingleResult();
+        return result == null ? null : ((Number) result).intValue();
     }
 
     @Override
     public Integer releaseLock(String lockName) {
         Query query = entityManager.createNativeQuery("SELECT RELEASE_LOCK(?)");
         query.setParameter(1, lockName);
-        return (Integer) query.getSingleResult();
+        Object result = query.getSingleResult();
+        return result == null ? null : ((Number) result).intValue();
     }
 }

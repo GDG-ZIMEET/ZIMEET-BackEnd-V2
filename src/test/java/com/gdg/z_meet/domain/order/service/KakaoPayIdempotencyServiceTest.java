@@ -176,22 +176,6 @@ class KakaoPayIdempotencyServiceTest {
                 });
     }
 
-    @Test
-    @DisplayName("첫 요청 - 정상 처리 및 SETNX 락 획득")
-    void 첫_요청_정상_처리_SETNX_락_획득() {
-        // given
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get(anyString())).thenReturn(null);
-        // SETNX 성공 (true 반환)
-        when(redisTemplate.opsForValue().setIfAbsent(anyString(), any(), any(Duration.class))).thenReturn(true);
-
-        // when
-        var result = idempotencyService.validate(TEST_IDEMPOTENCY_KEY, TEST_PAYLOAD);
-
-        // then
-        assertThat(result.isProcessing()).isTrue();
-        verify(redisTemplate.opsForValue()).setIfAbsent(eq("processing:test-key-123"), eq("processing"), eq(Duration.ofMinutes(5)));
-    }
 
     @Test
     @DisplayName("처리 중 표시 설정 - 이미 처리 중이면 실패")

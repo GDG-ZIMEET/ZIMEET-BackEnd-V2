@@ -61,7 +61,7 @@ public class KakaoPayApproveService {
                     .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
             
             // 결제 상태 확인
-            if (kakaoPayData.getStatus() == com.gdg.z_meet.domain.order.entity.PaymentStatus.APPROVED) {
+            if (kakaoPayData.getStatus() == PaymentStatus.APPROVED) {
                 log.warn("이미 승인된 결제입니다 - orderId: {}", parameter.getOrderId());
                 throw new BusinessException(Code.INVALID_KAKAO_API_RESPONSE);
             }
