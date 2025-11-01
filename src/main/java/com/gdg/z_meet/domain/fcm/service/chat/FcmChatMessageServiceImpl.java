@@ -8,7 +8,7 @@ import com.gdg.z_meet.domain.chat.entity.TeamChatRoom;
 import com.gdg.z_meet.domain.chat.repository.ChatRoomRepository;
 import com.gdg.z_meet.domain.chat.repository.JoinChatRepository;
 import com.gdg.z_meet.domain.chat.repository.TeamChatRoomRepository;
-import com.gdg.z_meet.global.client.FcmMessageClient;
+import com.gdg.z_meet.domain.fcm.service.producer.FcmMessageProducer;
 import com.gdg.z_meet.domain.meeting.entity.Team;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.global.exception.BusinessException;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FcmChatMessageServiceImpl implements FcmChatMessageService {
 
-    private final FcmMessageClient fcmMessageClient;
+    private final FcmMessageProducer fcmMessageProducer;
     private final ChatRoomRepository chatRoomRepository;
     private final TeamChatRoomRepository teamChatRoomRepository;
     private final JoinChatRepository joinChatRepository;
@@ -79,16 +79,11 @@ public class FcmChatMessageServiceImpl implements FcmChatMessageService {
             return;
         }
 
-        int successCount = 0;
+        // RabbitMQ를 통한 비동기 FCM 메시지 전송
         for (User user : recipients) {
-            boolean success = fcmMessageClient.sendFcmMessage(user.getId(), title, body);
-            if (!success) {
-                log.warn("FCM 메시지 전송 실패 - userId: {}", user.getId());
-            } else {
-                successCount++;
-            }
+            fcmMessageProducer.sendSingleMessage(user.getId(), title, body);
         }
-        log.info("FCM 전송 완료 - roomId: {}, 총 대상: {}, 성공 알림 수: {}", roomId, recipients.size(), successCount);
+        log.info("FCM 메시지를 큐에 전송했습니다 - roomId: {}, 총 대상: {}", roomId, recipients.size());
     }
 
     private List<User> findRecipients(Long roomId, Long senderId) {
@@ -107,10 +102,9 @@ public class FcmChatMessageServiceImpl implements FcmChatMessageService {
         String title = generateOpenChatTitle(user, chatRoom);
         String body = "두근두근💗 새로운 사람들과 인사부터 시작해보세요!";
 
-        boolean success = fcmMessageClient.sendFcmMessage(user.getId(), title, body);
-        if (!success) {
-            log.warn("FCM 채팅방 열림 관련 메시지 전송 실패 - userId: {}}", user.getId());
-        }
+        // RabbitMQ를 통한 비동기 FCM 메시지 전송
+        fcmMessageProducer.sendSingleMessage(user.getId(), title, body);
+        log.info("채팅방 열림 FCM 메시지를 큐에 전송했습니다 - userId: {}, roomId: {}", user.getId(), roomId);
     }
 
     private String generateOpenChatTitle(User user, ChatRoom chatRoom) {

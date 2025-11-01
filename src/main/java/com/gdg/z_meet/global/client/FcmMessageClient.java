@@ -17,6 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
 
+/**
+ * @deprecated RabbitMQ를 통한 비동기 처리로 전환되었습니다.
+ * 이 클래스는 더 이상 사용되지 않으며, {@link com.gdg.z_meet.domain.fcm.service.producer.FcmMessageProducer}를 사용하세요.
+ * 
+ * <p>제거 예정일: 다음 마이너 버전
+ */
+@Deprecated(since = "2024", forRemoval = true)
 @Service
 @RequiredArgsConstructor
 @Slf4j

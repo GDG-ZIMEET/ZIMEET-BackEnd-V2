@@ -45,7 +45,7 @@ public class FcmMessageProducerImpl implements FcmMessageProducer {
                 message
         );
 
-        log.info("브로드캐스트 FCM 메시지를 큐에 전송했습니다. messageId: {}, title: {}", 
+        log.debug("브로드캐스트 FCM 메시지를 큐에 전송했습니다. messageId: {}, title: {}",
                 message.getMessageId(), title);
     }
 
@@ -66,7 +66,7 @@ public class FcmMessageProducerImpl implements FcmMessageProducer {
                 message
         );
 
-        log.info("단일 FCM 메시지를 큐에 전송했습니다. messageId: {}, userId: {}",
+        log.debug("단일 FCM 메시지를 큐에 전송했습니다. messageId: {}, userId: {}",
                 message.getMessageId(), userId);
     }
 
@@ -94,7 +94,7 @@ public class FcmMessageProducerImpl implements FcmMessageProducer {
                 message
         );
 
-        log.info("테스트 FCM 메시지를 큐에 전송했습니다. messageId: {}, userId: {}", 
+        log.debug("테스트 FCM 메시지를 큐에 전송했습니다. messageId: {}, userId: {}",
                 message.getMessageId(), userId);
     }
 }

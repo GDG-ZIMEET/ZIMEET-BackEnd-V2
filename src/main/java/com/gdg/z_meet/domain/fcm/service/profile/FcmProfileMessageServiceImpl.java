@@ -1,6 +1,6 @@
 package com.gdg.z_meet.domain.fcm.service.profile;
 
-import com.gdg.z_meet.global.client.FcmMessageClient;
+import com.gdg.z_meet.domain.fcm.service.producer.FcmMessageProducer;
 import com.gdg.z_meet.domain.meeting.entity.Team;
 import com.gdg.z_meet.domain.meeting.entity.UserTeam;
 import com.gdg.z_meet.domain.meeting.repository.TeamRepository;
@@ -20,7 +20,7 @@ import java.util.TreeMap;
 @Slf4j
 public class FcmProfileMessageServiceImpl implements FcmProfileMessageService {
 
-    private final FcmMessageClient fcmMessageClient;
+    private final FcmMessageProducer fcmMessageProducer;
     private final UserTeamRepository userTeamRepository;
     private final UserProfileRepository userProfileRepository;
     private final TeamRepository teamRepository;
@@ -58,13 +58,12 @@ public class FcmProfileMessageServiceImpl implements FcmProfileMessageService {
             }
 
             if (titleToSend != null) {    // 중복 발송을 막기 위함
-                boolean success = fcmMessageClient.sendFcmMessage(userId, titleToSend, body);
-                if (success) {
-                    profile.setLastNotified(maxMilestone);
-                    userProfileRepository.save(profile);
-                } else {
-                    log.warn("FCM 프로필 조회 수 알림 전송 실패 - userId: {}", userId);
-                }
+                // RabbitMQ를 통한 비동기 FCM 메시지 전송
+                fcmMessageProducer.sendSingleMessage(userId, titleToSend, body);
+                // 큐에 성공적으로 전송되었으므로 마지막 알림 milestone 기록
+                profile.setLastNotified(maxMilestone);
+                userProfileRepository.save(profile);
+                log.info("프로필 조회 수 알림 메시지를 큐에 전송했습니다 - userId: {}, milestone: {}", userId, maxMilestone);
             }
         }
     }
@@ -99,24 +98,18 @@ public class FcmProfileMessageServiceImpl implements FcmProfileMessageService {
                 }
             }
 
-            boolean anySuccess = false;
             if (titleToSend != null) {   // 중복 발송을 막기 위함
                 List<UserTeam> userTeams = userTeamRepository.findAllByTeam(team);
+                // RabbitMQ를 통한 비동기 FCM 메시지 전송
                 for (UserTeam userTeam : userTeams) {
                     Long userId = userTeam.getUser().getId();
-
-                    boolean success = fcmMessageClient.sendFcmMessage(userId, titleToSend, body);
-                    if(!success) {
-                        anySuccess = true;
-                        log.warn("FCM 팀 조회 수 알림 전송 실패 - userId: {}, teamId: {}", userId, team.getId());
-                    }
+                    fcmMessageProducer.sendSingleMessage(userId, titleToSend, body);
                 }
-                if (anySuccess) {
-                    team.setLastNotified(maxMilestone);      // 마지막 알림 milestone 기록
-                    teamRepository.save(team);
-                    log.info("팀 알림 전송 완료 - teamId: {}, milestone: {}, members: {}, success: {}",
-                            team.getId(), maxMilestone, userTeams.size(), true);
-                }
+                // 큐에 성공적으로 전송되었으므로 마지막 알림 milestone 기록
+                team.setLastNotified(maxMilestone);
+                teamRepository.save(team);
+                log.debug("팀 조회 수 알림 메시지를 큐에 전송했습니다 - teamId: {}, milestone: {}, members: {}",
+                        team.getId(), maxMilestone, userTeams.size());
             }
         }
     }
