@@ -15,8 +15,9 @@ import com.gdg.z_meet.global.response.Code;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 @Service
@@ -29,26 +30,43 @@ public class KakaoPayApproveService {
     private final KakaoPayIdempotencyService kakaoPayIdempotencyService;
     private final KakaoItemProcessor kakaoItemProcessor;
     private final KakaoPayLockService kakaoPayLockService;
+    private final PlatformTransactionManager transactionManager;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    /**
+     * 새로운 트랜잭션에서 락을 획득하기 위한 TransactionTemplate
+     * REQUIRES_NEW 전파 전략 사용
+     */
+    private TransactionTemplate getNewTransactionTemplate() {
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return template;
+    }
+
     public KaKaoPayApproveDTO.Response approve(KaKaoPayApproveDTO.Parameter parameter, String idempotencyKey) {
-
-        String lockName = null;
+        String namespacedKey = null;
+        boolean isProcessing = false;
 
         try {
             // 멱등성 키 네임스페이스: userId:idempotencyKey
             String currentPayload = parameter.getOrderId() + ":" + parameter.getPgToken();
-            String namespacedKey = (idempotencyKey == null || idempotencyKey.isEmpty())
-                    ? idempotencyKey
-                    : (parameter.getUserId() + ":" + idempotencyKey);
-            var validationResult = kakaoPayIdempotencyService.validate(namespacedKey, currentPayload);
-            
-            if (validationResult.isCached()) {
-                return (KaKaoPayApproveDTO.Response) validationResult.getCachedResponse();
+            if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
+                namespacedKey = parameter.getUserId() + ":" + idempotencyKey;
+                
+                // 멱등성 키 검증 (캐시된 응답이 있으면 즉시 반환)
+                // validate()는 예외를 던질 수 있음 (payload 불일치, 처리 중인 요청 등)
+                var validationResult = kakaoPayIdempotencyService.validate(namespacedKey, currentPayload);
+                if (validationResult.isCached()) {
+                    return (KaKaoPayApproveDTO.Response) validationResult.getCachedResponse();
+                }
+                
+                // processing 상태로 표시된 경우에만 해제 필요
+                if (validationResult.isProcessing()) {
+                    isProcessing = true;
+                }
             }
 
-            // 락 획득
-            lockName = kakaoPayLockService.acquireLock(parameter.getOrderId());
+            // 락 획득 (별도 트랜잭션에서 수행 - MANDATORY 전파를 위해)
+            acquireLockInTransaction(parameter.getOrderId());
 
             // 중복 처리 방어: 이미 완료된 주문인지 확인
             if (itemPurchaseRepository.existsByOrderId(parameter.getOrderId())) {
@@ -96,22 +114,30 @@ public class KakaoPayApproveService {
 
             KaKaoPayApproveDTO.Response response = KaKaoPayApproveConverter.toResponse(kakaoApiResponse, parameter.getOrderId());
 
-            // 응답 캐시
-            if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
+            // 응답 캐시 (성공 시에만)
+            if (namespacedKey != null) {
                 kakaoPayIdempotencyService.cacheResponse(namespacedKey, response);
             }
 
             return response;
         } finally {
-            // 락 해제 (분리된 서비스 사용)
-            if (lockName != null) {
-                kakaoPayLockService.releaseLock(lockName);
-            }
+            // 락 해제는 KakaoPayLockService가 트랜잭션 커밋 후 자동으로 처리
+            // (KakaoPayLockService.releaseLock은 no-op이지만 명시적으로 주석 추가)
             
-            // 멱등성 처리 중 표시 해제
-            if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
-                kakaoPayIdempotencyService.unmarkAsProcessing(idempotencyKey);
+            // 멱등성 처리 중 표시 해제 (processing 상태로 표시된 경우에만 해제)
+            // validate()에서 예외가 발생하거나 cached 상태인 경우에는 해제하지 않음
+            if (namespacedKey != null && isProcessing) {
+                kakaoPayIdempotencyService.unmarkAsProcessing(namespacedKey);
             }
         }
+    }
+
+    /**
+     * 락 획득 (새로운 트랜잭션에서 수행)
+     * acquireLock은 MANDATORY 전파를 사용하므로 트랜잭션이 필요함
+     * TransactionTemplate을 사용하여 REQUIRES_NEW와 동일한 효과 구현
+     */
+    private String acquireLockInTransaction(String orderId) {
+        return getNewTransactionTemplate().execute(status -> kakaoPayLockService.acquireLock(orderId));
     }
 }

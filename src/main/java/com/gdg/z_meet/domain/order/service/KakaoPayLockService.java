@@ -73,13 +73,6 @@ public class KakaoPayLockService {
         }
     }
 
-    /**
-     * 수동 해제는 사용하지 않습니다(자동 해제). 호환을 위해 남겨두되 no-op.
-     */
-    public void releaseLock(String lockName) {
-        log.debug("수동 락 해제 요청 무시 - lockName: {}", lockName);
-    }
-
     private void registerReleaseAfterCommit(String lockName, String ownerId, Instant acquiredAt) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override

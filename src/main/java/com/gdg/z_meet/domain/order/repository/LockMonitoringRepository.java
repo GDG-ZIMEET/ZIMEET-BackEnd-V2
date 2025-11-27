@@ -1,16 +1,11 @@
 package com.gdg.z_meet.domain.order.repository;
 
-import java.time.Instant;
+import com.gdg.z_meet.domain.order.entity.LockMonitoring;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface LockMonitoringRepository {
-
-    int insertAcquired(String lockName, String ownerId, Instant acquiredAt, Integer waitMs);
-
-    int insertReleased(String lockName, String ownerId, Instant releasedAt, Integer holdMs);
-
-    int insertTimeout(String lockName, String ownerId, Integer waitMs);
-
-    int insertFailed(String lockName, String ownerId, String errorMessage);
+/**
+ * 락 모니터링 데이터를 위한 Repository
+ */
+public interface LockMonitoringRepository extends JpaRepository<LockMonitoring, Long> {
 }
-
 
