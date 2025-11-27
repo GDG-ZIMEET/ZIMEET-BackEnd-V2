@@ -88,6 +88,7 @@ tasks.named('test') {
 	useJUnitPlatform()
 	exclude '**/ZiMeetApplicationTests.class'
 	finalizedBy 'jacocoTestReport'
+	maxParallelForks = 1  // CI 환경에서 테이블 생성 순서 문제 방지
 }
 
 clean {

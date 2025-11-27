@@ -1,4 +1,4 @@
-FROM openjdk:17
+FROM eclipse-temurin:17-jdk
 
 # Docker 이미지 빌드 과정에서 외부에서 값을 전달 받아 설정하기 위함
 ARG JAR_FILE=build/libs/*.jar

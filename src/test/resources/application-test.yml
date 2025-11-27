@@ -12,19 +12,20 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
+        # CI 환경에서 테이블 생성 순서 보장
+        jdbc:
+          time_zone: UTC
     show-sql: true
     database-platform: org.hibernate.dialect.H2Dialect
-
-  data:
-    redis:
-      host: localhost
-      port: 6379
+    defer-datasource-initialization: false
 
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-#      - org.springframework.boot.autoconfigure.data.mongo.MongoAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration
       - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
 
   cache:
     type: caffeine

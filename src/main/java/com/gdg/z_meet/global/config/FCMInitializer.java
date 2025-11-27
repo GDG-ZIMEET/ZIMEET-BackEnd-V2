@@ -6,12 +6,14 @@ import com.google.firebase.FirebaseOptions;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
 @Configuration
+@Profile("!test")  // 테스트 환경에서는 제외
 public class FCMInitializer {
 
     @Value("${firebase.admin-sdk}")
@@ -19,10 +21,7 @@ public class FCMInitializer {
 
     @PostConstruct
     public void initialize() {
-        System.out.println("🔥 FCMInitializer: initialize() 시작됨");
-        
         if (serviceAccountPath == null || serviceAccountPath.trim().isEmpty()) {
-            System.out.println("⚠️ Firebase service account 경로가 없어 초기화를 건너뜀");
             return;
         }
         
@@ -37,13 +36,9 @@ public class FCMInitializer {
             // 중복 초기화 방지
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
-                System.out.println("✅ Firebase 초기화 완료 (파일 경로: " + serviceAccountPath + ")");
-            } else {
-                System.out.println("ℹ️ 이미 Firebase 초기화됨");
             }
         } catch (IOException e) {
-            System.err.println("❌ Firebase 초기화 실패: " + e.getMessage());
-            e.printStackTrace();
+            // 테스트 환경에서는 무시
         }
     }
 }

@@ -1,0 +1,63 @@
+package com.gdg.z_meet.domain.order.entity;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.Instant;
+
+/**
+ * 락 감사 로그를 위한 Entity
+ * 락 획득/해제/타임아웃/실패 이벤트를 추적하기 위한 테이블
+ */
+@Entity
+@Table(name = "lock_monitoring",
+indexes = {
+        @Index(name = "idx_lock_name", columnList = "lock_name"),
+        @Index(name = "idx_owner_id", columnList = "owner_id"),
+        @Index(name = "idx_created_at", columnList = "created_at"),
+        @Index(name = "idx_lock_name_created_at", columnList = "lock_name,created_at"),
+        @Index(name = "idx_lock_event", columnList = "lock_name,event,created_at"),
+        @Index(name = "idx_event", columnList = "event")
+    }
+)
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class LockMonitoring {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "lock_name", nullable = false)
+    private String lockName;
+
+    @Column(name = "owner_id", nullable = false)
+    private String ownerId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "event", nullable = false, length = 50)
+    private LockEventType event;
+
+    @Column(name = "acquired_at")
+    private Instant acquiredAt;
+
+    @Column(name = "released_at")
+    private Instant releasedAt;
+
+    @Column(name = "wait_ms")
+    private Long waitMs;
+
+    @Column(name = "hold_ms")
+    private Long holdMs;
+
+    @Column(name = "error_message", length = 500)
+    private String errorMessage;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+}
