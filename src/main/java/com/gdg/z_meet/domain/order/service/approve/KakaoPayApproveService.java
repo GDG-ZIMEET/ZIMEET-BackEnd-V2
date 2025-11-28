@@ -5,7 +5,7 @@ import com.gdg.z_meet.domain.order.dto.KaKaoPayApproveDTO;
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.order.repository.KakaoItemPurchaseRepository;
 
-import com.gdg.z_meet.domain.order.service.Idempotency.KakaoPayIdempotencyService;
+import com.gdg.z_meet.domain.order.service.idempotency.KakaoPayIdempotencyService;
 import com.gdg.z_meet.domain.order.service.locking.KakaoPayLockService;
 import com.gdg.z_meet.domain.order.service.PaymentCompensationProducer;
 import com.gdg.z_meet.domain.order.service.cancel.KakaoPayCancelService;

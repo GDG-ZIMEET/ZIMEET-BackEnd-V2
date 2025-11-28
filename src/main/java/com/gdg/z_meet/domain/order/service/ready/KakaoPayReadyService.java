@@ -3,7 +3,7 @@ package com.gdg.z_meet.domain.order.service.ready;
 import com.gdg.z_meet.domain.order.client.KaKaoPayApiClient;
 import com.gdg.z_meet.domain.order.converter.KaKaoPayReadyConverter;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayReadyDTO;
-import com.gdg.z_meet.domain.order.service.Idempotency.KakaoPayIdempotencyService;
+import com.gdg.z_meet.domain.order.service.idempotency.KakaoPayIdempotencyService;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
