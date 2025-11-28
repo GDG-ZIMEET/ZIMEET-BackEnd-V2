@@ -1,4 +1,4 @@
-package com.gdg.z_meet.domain.order.service;
+package com.gdg.z_meet.domain.order.service.approve;
 
 import com.gdg.z_meet.domain.meeting.entity.Team;
 import com.gdg.z_meet.domain.meeting.entity.UserTeam;

@@ -1,4 +1,4 @@
-package com.gdg.z_meet.domain.order.service;
+package com.gdg.z_meet.domain.order.service.monitoring;
 
 import com.gdg.z_meet.domain.order.entity.LockEventType;
 import com.gdg.z_meet.domain.order.entity.LockMonitoring;
