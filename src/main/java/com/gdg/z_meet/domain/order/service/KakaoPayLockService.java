@@ -1,94 +1,126 @@
 package com.gdg.z_meet.domain.order.service;
 
-import com.gdg.z_meet.domain.order.repository.NamedLockRepository;
+import com.gdg.z_meet.domain.order.service.monitoring.KakaoPayLockMonitoringService;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
- * 결제 프로세스에 필요한 락 관리 담당
- * 
- * 네임드락 획득/해제가 락을 얻은 시점의 트랜잭션과 같은 세션에서 이루어져야 함.
- * MANDATORY 전파 전략을 통해 상위 트랜잭션 안에서만 호출되도록 강제
+ * 결제 프로세스 락 관리 (MySQL Named Lock)
+ *
+ * [개선 사항]
+ * - DataSource를 직접 사용하여 락 전용 Connection 관리
+ * - 비즈니스 트랜잭션과 락 점유 Connection 분리
+ * - executeWithLock 패턴으로 락 획득-실행-해제 라이프사이클 명시적 제어
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class KakaoPayLockService {
 
-    private final NamedLockRepository namedLockRepository;
+    private final DataSource dataSource;
     private final KakaoPayLockMonitoringService kakaoPaylockMonitoringService;
 
-    private static final String LOCK_PREFIX = "LOCK_KAKAO_PAY_APPROVE_";
+    public KakaoPayLockService(@Qualifier("lockDataSource") DataSource dataSource,
+            KakaoPayLockMonitoringService kakaoPaylockMonitoringService) {
+        this.dataSource = dataSource;
+        this.kakaoPaylockMonitoringService = kakaoPaylockMonitoringService;
+    }
 
-    private static final Duration ACQUIRE_TIMEOUT = Duration.ofSeconds(3);
+    private static final String LOCK_PREFIX = "LOCK_KAKAO_PAY_APPROVE_";
+    private static final String GET_LOCK_QUERY = "SELECT GET_LOCK(?, ?)";
+    private static final String RELEASE_LOCK_QUERY = "SELECT RELEASE_LOCK(?)";
+    private static final int LOCK_TIMEOUT_SECONDS = 3;
 
     /**
-     * 주문 ID에 대한 락을 획득 (MySQL 네임드락)
-     * - GET_LOCK(timeout)은 내부 대기 포함
-     * - 성공 시 감사 로그 기록
-     * - 커밋 이후(afterCommit) 해제 및 감사 로그 기록
+     * 네임드 락을 획득하고 비즈니스 로직을 수행한 뒤 락을 해제함
      */
-    @Transactional(propagation = Propagation.MANDATORY)
-    public String acquireLock(String orderId) {
+    public <T> T executeWithLock(String orderId, Supplier<T> businessLogic) {
         String lockName = LOCK_PREFIX + orderId;
-        String ownerId = (TransactionSynchronizationManager.getCurrentTransactionName() != null)
-                ? TransactionSynchronizationManager.getCurrentTransactionName()
-                : UUID.randomUUID().toString();
+        String ownerId = UUID.randomUUID().toString();
         Instant start = Instant.now();
 
-        try {
-            Integer result = namedLockRepository.getLock(lockName, (int) ACQUIRE_TIMEOUT.getSeconds());
-            int waitMs = (int) Duration.between(start, Instant.now()).toMillis();
+        try (Connection conn = dataSource.getConnection()) {
 
-            if (result == null || result == 0) {
-                kakaoPaylockMonitoringService.timeout(lockName, ownerId, waitMs);
-                log.warn("네임드락 획득 실패/타임아웃 - lockName: {}", lockName);
+            if (!acquireLock(conn, lockName, ownerId, start)) {
                 throw new BusinessException(Code.IDEMPOTENCY_CONFLICT);
             }
 
-            // 감사: 획득 기록
-            kakaoPaylockMonitoringService.acquired(lockName, ownerId, Instant.now(), waitMs);
+            try {
+                return businessLogic.get();
+            } finally {
+                releaseLock(conn, lockName, ownerId, start);
+            }
 
-            // 커밋 이후 해제 및 감사 기록 등록
-            registerReleaseAfterCommit(lockName, ownerId, Instant.now());
-
-            log.debug("네임드락 획득 성공 - lockName: {}, ownerId:{}", lockName, ownerId);
-            return lockName;
-        } catch (BusinessException e) {
-            throw e;
-        } catch (Exception e) {
-            kakaoPaylockMonitoringService.failed(lockName, ownerId, e.getMessage());
+        } catch (SQLException e) {
+            kakaoPaylockMonitoringService.failed(lockName, ownerId, "DB_CONNECTION_ERROR: " + e.getMessage());
+            log.error("네임드 락 실행 중 DB 오류 - lockName: {}", lockName, e);
             throw new BusinessException(Code.INTERNAL_SERVER_ERROR);
         }
     }
 
-    private void registerReleaseAfterCommit(String lockName, String ownerId, Instant acquiredAt) {
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                try {
-                    namedLockRepository.releaseLock(lockName);
-                    int holdMs = (int) Duration.between(acquiredAt, Instant.now()).toMillis();
-                    kakaoPaylockMonitoringService.released(lockName, ownerId, Instant.now(), holdMs);
-                    log.debug("커밋 후 네임드락 해제 - lockName: {}", lockName);
-                } catch (Exception e) {
-                    try {
-                        kakaoPaylockMonitoringService.failed(lockName, ownerId, "AFTER_COMMIT_RELEASE_FAILED: " + e.getMessage());
-                    } catch (Exception ignore) { }
-                    log.warn("커밋 후 네임드락 해제 실패 - lockName: {}", lockName, e);
+    private boolean acquireLock(Connection conn, String lockName, String ownerId, Instant start) {
+        try (PreparedStatement pstmt = conn.prepareStatement(GET_LOCK_QUERY)) {
+            pstmt.setString(1, lockName);
+            pstmt.setInt(2, LOCK_TIMEOUT_SECONDS);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    int result = rs.getInt(1);
+                    int waitMs = (int) Duration.between(start, Instant.now()).toMillis();
+
+                    if (result == 1) {
+                        kakaoPaylockMonitoringService.acquired(lockName, ownerId, Instant.now(), waitMs);
+                        log.debug("네임드락 획득 성공 - lockName: {}, ownerId: {}", lockName, ownerId);
+                        return true;
+                    } else {
+                        kakaoPaylockMonitoringService.timeout(lockName, ownerId, waitMs);
+                        log.warn("네임드락 획득 실패 (타임아웃) - lockName: {}", lockName);
+                        return false;
+                    }
                 }
             }
-        });
+        } catch (SQLException e) {
+            kakaoPaylockMonitoringService.failed(lockName, ownerId, "ACQUIRE_FAILED: " + e.getMessage());
+            log.error("네임드락 획득 중 오류 - lockName: {}", lockName, e);
+        }
+        return false;
+    }
+
+    private void releaseLock(Connection conn, String lockName, String ownerId, Instant acquiredAt) {
+        try (PreparedStatement pstmt = conn.prepareStatement(RELEASE_LOCK_QUERY)) {
+            pstmt.setString(1, lockName);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    int result = rs.getInt(1);
+                    int holdMs = (int) Duration.between(acquiredAt, Instant.now()).toMillis();
+
+                    if (result == 1) {
+                        kakaoPaylockMonitoringService.released(lockName, ownerId, Instant.now(), holdMs);
+                        log.debug("네임드락 해제 성공 - lockName: {}", lockName);
+                    } else {
+                        // 락이 존재하지 않거나 내 소유가 아님
+                        kakaoPaylockMonitoringService.failed(lockName, ownerId, "RELEASE_FAILED_NOT_OWNER");
+                        log.warn("네임드락 해제 실패 (소유자 불일치 등) - lockName: {}", lockName);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            kakaoPaylockMonitoringService.failed(lockName, ownerId, "RELEASE_ERROR: " + e.getMessage());
+            log.error("네임드락 해제 중 오류 - lockName: {}", lockName, e);
+        }
     }
 }
