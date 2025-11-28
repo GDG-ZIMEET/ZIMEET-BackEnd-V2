@@ -1,4 +1,4 @@
-package com.gdg.z_meet.domain.order.service;
+package com.gdg.z_meet.domain.order.service.locking;
 
 import com.gdg.z_meet.domain.order.service.monitoring.KakaoPayLockMonitoringService;
 import com.gdg.z_meet.global.exception.BusinessException;

@@ -1,4 +1,4 @@
-package com.gdg.z_meet.domain.order.service;
+package com.gdg.z_meet.domain.order.service.Idempotency;
 
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
