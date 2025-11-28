@@ -1,20 +1,15 @@
-package com.gdg.z_meet.domain.order.service;
+package com.gdg.z_meet.domain.order.service.ready;
 
 import com.gdg.z_meet.domain.order.client.KaKaoPayApiClient;
 import com.gdg.z_meet.domain.order.converter.KaKaoPayReadyConverter;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayReadyDTO;
-import com.gdg.z_meet.domain.order.entity.KakaoPayData;
-import com.gdg.z_meet.domain.order.entity.ProductType;
-import com.gdg.z_meet.domain.order.repository.KakaoPayDataRepository;
-import com.gdg.z_meet.domain.meeting.repository.UserTeamRepository;
+import com.gdg.z_meet.domain.order.service.Idempotency.KakaoPayIdempotencyService;
 import com.gdg.z_meet.domain.user.entity.User;
-import com.gdg.z_meet.domain.user.repository.UserRepository;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -23,34 +18,32 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class KakaoPayReadyService {
 
-    private final UserRepository userRepository;
     private final KaKaoPayApiClient kaKaoPayApiClient;
-    private final KakaoPayDataRepository kakaoPayDataRepository;
-    private final UserTeamRepository userTeamRepository;
     private final KakaoPayIdempotencyService kakaoPayIdempotencyService;
+    private final KakaoPayReadyTransactionService transactionService;
 
-    @Transactional
     public KaKaoPayReadyDTO.Response ready(KaKaoPayReadyDTO.Parameter parameter, String idempotencyKey) {
         String namespacedKey = null;
+        boolean isIdempotencyProcessing = false;
         try {
             // 멱등성 키 네임스페이스: userId:idempotencyKey
             namespacedKey = (idempotencyKey == null || idempotencyKey.isEmpty())
                     ? idempotencyKey
                     : (parameter.getBuyerId() + ":" + idempotencyKey);
-            
+
             // 멱등성 키 검증
-            String currentPayload = parameter.getTeamId() + ":" + parameter.getProductType() + ":" + parameter.getTotalPrice();
+            String currentPayload = parameter.getTeamId() + ":" + parameter.getProductType() + ":"
+                    + parameter.getTotalPrice();
             var validationResult = kakaoPayIdempotencyService.validate(namespacedKey, currentPayload);
-            
+
             if (validationResult.isCached()) {
                 return (KaKaoPayReadyDTO.Response) validationResult.getCachedResponse();
             }
 
-            // 1. 주문자 정보 및 결제할 상품 검증
-            User buyer = userRepository.findById(parameter.getBuyerId())
-                    .orElseThrow(() -> new BusinessException(Code.MEMBER_NOT_FOUND));
+            isIdempotencyProcessing = true;
 
-            validateProductType(parameter);
+            // 1. 주문자 정보 및 결제할 상품 검증
+            User buyer = transactionService.validateAndGetBuyer(parameter);
 
             // 2. 결제 준비 API 호출 (주문 ID 할당)
             String orderId = createOrderId();
@@ -66,9 +59,7 @@ public class KakaoPayReadyService {
             }
 
             // 3. 결제 정보 DB 저장
-            KakaoPayData kaKaoPayData = KaKaoPayReadyConverter.toKakaoPayData(
-                    kakaoApiResponse, parameter, orderId, buyer);
-            kakaoPayDataRepository.save(kaKaoPayData);
+            transactionService.saveReadyData(kakaoApiResponse, parameter, orderId, buyer);
 
             KaKaoPayReadyDTO.Response response = KaKaoPayReadyConverter.toResponse(kakaoApiResponse, orderId);
 
@@ -79,26 +70,9 @@ public class KakaoPayReadyService {
 
             return response;
         } finally {
-            // 멱등성 처리 중 표시 해제
-            if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
+            // 멱등성 처리 중 표시 해제 (현재 요청이 처리 중 상태를 점유했던 경우에만)
+            if (isIdempotencyProcessing && idempotencyKey != null && !idempotencyKey.isEmpty()) {
                 kakaoPayIdempotencyService.unmarkAsProcessing(namespacedKey);
-            }
-        }
-    }
-
-    private void validateProductType(KaKaoPayReadyDTO.Parameter parameter) {
-        if (!ProductType.isValid(parameter.getProductType())) {
-            throw new BusinessException(Code.INVALID_PRODUCT_TYPE);
-        }
-
-        ProductType productType = ProductType.valueOf(parameter.getProductType());
-        
-        // TICKET, SEASON이 아닌 경우 (즉, TWO_TO_TWO, THREE_TO_THREE인 경우) 팀 멤버 검증
-        if (productType != ProductType.TICKET && productType != ProductType.SEASON) {
-            boolean isMember = userTeamRepository.existsByUserIdAndTeamIdAndActiveStatus(
-                    parameter.getBuyerId(), parameter.getTeamId());
-            if (!isMember) {
-                throw new BusinessException(Code.TEAM_USER_NOT_FOUND);
             }
         }
     }
