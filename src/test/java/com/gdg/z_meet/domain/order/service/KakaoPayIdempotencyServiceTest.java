@@ -1,5 +1,6 @@
 package com.gdg.z_meet.domain.order.service;
 
+import com.gdg.z_meet.domain.order.service.Idempotency.KakaoPayIdempotencyService;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
 import org.junit.jupiter.api.BeforeEach;
