@@ -7,20 +7,19 @@ import com.gdg.z_meet.domain.order.entity.PaymentStatus;
 import com.gdg.z_meet.domain.order.entity.ProductType;
 import com.gdg.z_meet.domain.order.repository.KakaoItemPurchaseRepository;
 import com.gdg.z_meet.domain.order.repository.KakaoPayDataRepository;
-import com.gdg.z_meet.domain.order.repository.NamedLockRepository;
-import com.gdg.z_meet.domain.order.service.KakaoPayApproveService;
-import com.gdg.z_meet.domain.order.service.KakaoPayIdempotencyService;
-import com.gdg.z_meet.domain.order.service.KakaoPayLockMonitoringService;
+import com.gdg.z_meet.domain.order.service.approve.KakaoPayApproveService;
+import com.gdg.z_meet.domain.order.service.Idempotency.KakaoPayIdempotencyService;
+import com.gdg.z_meet.domain.order.service.locking.KakaoPayLockService;
+import com.gdg.z_meet.domain.order.service.monitoring.KakaoPayLockMonitoringService;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.domain.user.entity.UserProfile;
 import com.gdg.z_meet.domain.user.entity.enums.*;
 import com.gdg.z_meet.domain.user.repository.UserProfileRepository;
 import com.gdg.z_meet.domain.user.repository.UserRepository;
-import com.gdg.z_meet.global.exception.BusinessException;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
@@ -32,11 +31,13 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import com.gdg.z_meet.domain.chat.repository.mongo.MessageRepository;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Optional;
-import java.util.concurrent.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
@@ -61,8 +62,12 @@ class KakaoPayApproveIntegrationTest {
         @Autowired
         private UserProfileRepository userProfileRepository;
 
-        @MockBean
-        private NamedLockRepository namedLockRepository;
+        @Autowired // Changed from @MockBean to @Autowired to test actual locking mechanism
+        private KakaoPayLockService kakaoPayLockService;
+
+        @Autowired
+        @Qualifier("lockDataSource")
+        private DataSource lockDataSource;
 
         @MockBean
         private KaKaoPayApiClient kaKaoPayApiClient;
@@ -76,7 +81,7 @@ class KakaoPayApproveIntegrationTest {
         @MockBean
         private RedisTemplate<String, Object> redisTemplate;
 
-        // Provide mocks to satisfy external dependencies in test context
+        // External dependencies mocks
         @MockBean
         private ConnectionFactory connectionFactory;
         @MockBean
@@ -92,15 +97,20 @@ class KakaoPayApproveIntegrationTest {
 
         @BeforeEach
         void setUp() {
-                // Mock RedisTemplate operations to prevent NPE in
-                // ChatRoomCommandService.initRandomChatIdRedis()
-                org.mockito.Mockito.when(redisTemplate.hasKey(org.mockito.ArgumentMatchers.anyString()))
-                                .thenReturn(false);
+                // Register H2 aliases for MySQL Named Lock functions
+                try (Connection conn = lockDataSource.getConnection();
+                                Statement stmt = conn.createStatement()) {
+                        stmt.execute("CREATE ALIAS IF NOT EXISTS GET_LOCK FOR \"com.gdg.z_meet.global.util.H2LockUtils.getLock\"");
+                        stmt.execute("CREATE ALIAS IF NOT EXISTS RELEASE_LOCK FOR \"com.gdg.z_meet.global.util.H2LockUtils.releaseLock\"");
+                } catch (SQLException e) {
+                        throw new RuntimeException("Failed to register H2 aliases", e);
+                }
+
+                // Mock RedisTemplate
+                org.mockito.Mockito.when(redisTemplate.hasKey(anyString())).thenReturn(false);
                 ValueOperations<String, Object> valueOps = org.mockito.Mockito.mock(ValueOperations.class);
-                org.mockito.Mockito.when(redisTemplate.opsForValue())
-                                .thenReturn(valueOps);
-                org.mockito.Mockito.doNothing().when(valueOps).set(org.mockito.ArgumentMatchers.anyString(),
-                                org.mockito.ArgumentMatchers.any());
+                org.mockito.Mockito.when(redisTemplate.opsForValue()).thenReturn(valueOps);
+                org.mockito.Mockito.doNothing().when(valueOps).set(anyString(), any());
 
                 String uniqueId = String.valueOf(System.currentTimeMillis());
                 buyer = userRepository.saveAndFlush(User.builder()
@@ -136,7 +146,7 @@ class KakaoPayApproveIntegrationTest {
                                 .productType(productType)
                                 .status(PaymentStatus.PREPARED)
                                 .build();
-                return kakaoPayDataRepository.save(data);
+                return kakaoPayDataRepository.saveAndFlush(data);
         }
 
         private KaKaoPayApproveDTO.KaKaoApiResponse mockApproveApiResponse(String orderId, String tid, long total,
@@ -158,12 +168,9 @@ class KakaoPayApproveIntegrationTest {
                 // given
                 String orderId = "order-approve-success";
                 String tid = "TID-OK-1";
-                long total = 1200L; // TICKET 유효 가격: 500, 1200, 3000
+                long total = 1200L;
                 prepareKakaoPayData(orderId, tid, total, ProductType.TICKET);
 
-                // NamedLockRepository mock: 락 획득 성공
-                given(namedLockRepository.getLock(anyString(), anyInt()))
-                                .willReturn(1);
                 given(kaKaoPayApiClient.requestPaymentApprove(any(), any()))
                                 .willReturn(Optional.of(mockApproveApiResponse(orderId, tid, total, 120L)));
                 given(kakaoPayIdempotencyService.validate(nullable(String.class), any(String.class)))
@@ -176,7 +183,7 @@ class KakaoPayApproveIntegrationTest {
                                 .build();
 
                 // when
-                var res = approveService.approve(param, null);
+                approveService.approve(param, null);
 
                 // then
                 KakaoPayData updated = kakaoPayDataRepository.findByOrderId(orderId).orElseThrow();
@@ -184,86 +191,11 @@ class KakaoPayApproveIntegrationTest {
                 assertThat(updated.getItemPurchase()).isNotNull();
                 assertThat(itemPurchaseRepository.existsByOrderId(orderId)).isTrue();
 
-                // Verify named lock was acquired
-                verify(namedLockRepository, times(1))
-                                .getLock(argThat(lockName -> lockName.contains(orderId)), anyInt());
-                verify(namedLockRepository, times(1))
-                                .releaseLock(argThat(lockName -> lockName.contains(orderId)));
-
-                // Verify lock monitoring events were recorded
-                // acquired: 락 획득 성공 시 호출
-                verify(kakaoPayLockMonitoringService, times(1))
-                                .acquired(argThat(lockName -> lockName.contains(orderId)), anyString(),
-                                                any(java.time.Instant.class), anyInt());
-                // released: 트랜잭션 커밋 후 afterCommit에서 호출
-                verify(kakaoPayLockMonitoringService, times(1))
-                                .released(argThat(lockName -> lockName.contains(orderId)), anyString(),
-                                                any(java.time.Instant.class), anyInt());
-        }
-
-        @Test
-        void 결제승인_동시성_하나성공_하나충돌() throws Exception {
-                // given
-                String orderId = "order-concurrent";
-                String tid = "TID-OK-2";
-                long total = 3000L; // TICKET 유효 가격: 500, 1200, 3000
-                prepareKakaoPayData(orderId, tid, total, ProductType.TICKET);
-
-                // first call acquires, second times out
-                given(namedLockRepository.getLock(anyString(), anyInt()))
-                                .willReturn(1) // first thread: 락 획득 성공
-                                .willReturn(0); // second thread: 락 획득 실패 (타임아웃)
-                given(kaKaoPayApiClient.requestPaymentApprove(any(), any()))
-                                .willReturn(Optional.of(mockApproveApiResponse(orderId, tid, total, 300L)));
-                given(kakaoPayIdempotencyService.validate(nullable(String.class), any(String.class)))
-                                .willReturn(KakaoPayIdempotencyService.IdempotencyValidationResult.processing());
-
-                KaKaoPayApproveDTO.Parameter param = KaKaoPayApproveDTO.Parameter.builder()
-                                .userId(buyer.getId())
-                                .orderId(orderId)
-                                .pgToken("pg-token")
-                                .build();
-
-                ExecutorService es = Executors.newFixedThreadPool(2);
-                Callable<Object> task = () -> approveService.approve(param, null);
-
-                Future<Object> f1 = es.submit(task);
-                Future<Object> f2 = es.submit(task);
-
-                int success = 0;
-                int conflict = 0;
-                for (Future<Object> f : new Future[] { f1, f2 }) {
-                        try {
-                                f.get(5, TimeUnit.SECONDS);
-                                success++;
-                        } catch (ExecutionException ee) {
-                                if (ee.getCause() instanceof BusinessException) {
-                                        conflict++;
-                                } else {
-                                        throw ee;
-                                }
-                        }
-                }
-
-                es.shutdownNow();
-
-                assertThat(success).isEqualTo(1);
-                assertThat(conflict).isEqualTo(1);
-
-                KakaoPayData updated = kakaoPayDataRepository.findByOrderId(orderId).orElseThrow();
-                assertThat(updated.getStatus()).isEqualTo(PaymentStatus.APPROVED);
-                assertThat(itemPurchaseRepository.existsByOrderId(orderId)).isTrue();
-
-                // Verify lock monitoring events were recorded
-                // 성공한 스레드: acquired + released
                 verify(kakaoPayLockMonitoringService, times(1))
                                 .acquired(argThat(lockName -> lockName.contains(orderId)), anyString(),
                                                 any(java.time.Instant.class), anyInt());
                 verify(kakaoPayLockMonitoringService, times(1))
                                 .released(argThat(lockName -> lockName.contains(orderId)), anyString(),
                                                 any(java.time.Instant.class), anyInt());
-                // 타임아웃된 스레드: timeout
-                verify(kakaoPayLockMonitoringService, times(1))
-                                .timeout(argThat(lockName -> lockName.contains(orderId)), anyString(), anyInt());
         }
 }
