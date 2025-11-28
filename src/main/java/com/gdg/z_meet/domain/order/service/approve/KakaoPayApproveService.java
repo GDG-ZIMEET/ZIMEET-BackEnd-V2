@@ -7,8 +7,8 @@ import com.gdg.z_meet.domain.order.repository.KakaoItemPurchaseRepository;
 
 import com.gdg.z_meet.domain.order.service.idempotency.KakaoPayIdempotencyService;
 import com.gdg.z_meet.domain.order.service.locking.KakaoPayLockService;
-import com.gdg.z_meet.domain.order.service.PaymentCompensationProducer;
-import com.gdg.z_meet.domain.order.service.cancel.KakaoPayCancelService;
+// import com.gdg.z_meet.domain.order.service.PaymentCompensationProducer;
+// import com.gdg.z_meet.domain.order.service.cancel.KakaoPayCancelService;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +24,8 @@ public class KakaoPayApproveService {
     private final KakaoItemPurchaseRepository itemPurchaseRepository;
     private final KakaoPayIdempotencyService kakaoPayIdempotencyService;
     private final KakaoPayLockService kakaoPayLockService;
-    private final PaymentCompensationProducer paymentCompensationProducer;
-    private final KakaoPayCancelService kakaoPayCancelService;
+    // private final PaymentCompensationProducer paymentCompensationProducer;
+    // private final KakaoPayCancelService kakaoPayCancelService;
     private final KakaoPayApproveTransactionService transactionService;
 
     /**
@@ -86,7 +86,7 @@ public class KakaoPayApproveService {
                     parameter.getOrderId(), e.getMessage(), e);
 
             // 보상 처리 시도
-            handleCompensation(parameter, e);
+            // handleCompensation(parameter, e);
 
             throw e;
         } finally {
@@ -97,35 +97,35 @@ public class KakaoPayApproveService {
         }
     }
 
-    private void handleCompensation(KaKaoPayApproveDTO.Parameter parameter, Exception e) {
-        try {
-            // DB에서 결제 데이터 조회 (트랜잭션이 커밋되었을 가능성이 있으므로 조회 시도)
-            // 주의: startPaymentProcessing이 실패했다면 데이터가 없을 수도 있음
-            // 따라서 예외 처리를 통해 안전하게 접근
-            transactionService.findKakaoPayData(parameter.getOrderId()).ifPresent(kakaoPayData -> {
-                String failureStep = determineFailureStep(e);
-
-                // API 호출 성공 후 내부 처리 실패인 경우 (TID가 있어야 함)
-                // 하지만 여기서 TID를 알기 어려우므로, KakaoPayData에 TID가 저장되어 있는지 확인하거나
-                // 단순히 실패 상태로만 변경할지 결정해야 함.
-                // 현재 구조에서는 API 호출 후 TID를 DB에 저장하는 단계가 completePayment에 있으므로,
-                // API 호출은 성공했으나 DB 저장이 안 된 상태일 수 있음.
-                // 이 경우 TID를 모르므로 망취소(전체 취소)가 어려울 수 있음.
-
-                // 만약 API 호출 전 실패라면 단순히 FAILED로 변경
-                transactionService.markAsFailed(kakaoPayData.getId(), "결제 승인 실패: " + e.getMessage());
-
-                // 비동기 보상 메시지 발행 (필요한 경우)
-                // TID가 없으면 보상 처리가 제한적일 수 있음
-                if (kakaoPayData.getTid() != null) {
-                    compensatePaymentAsync(kakaoPayData, kakaoPayData.getTid(),
-                            parameter.getUserId(), "내부 처리 실패: " + e.getMessage(), failureStep);
-                }
-            });
-        } catch (Exception ex) {
-            log.error("보상 처리 중 오류 발생 - orderId: {}", parameter.getOrderId(), ex);
-        }
-    }
+    // private void handleCompensation(KaKaoPayApproveDTO.Parameter parameter, Exception e) {
+    //     try {
+    //         // DB에서 결제 데이터 조회 (트랜잭션이 커밋되었을 가능성이 있으므로 조회 시도)
+    //         // 주의: startPaymentProcessing이 실패했다면 데이터가 없을 수도 있음
+    //         // 따라서 예외 처리를 통해 안전하게 접근
+    //         transactionService.findKakaoPayData(parameter.getOrderId()).ifPresent(kakaoPayData -> {
+    //             String failureStep = determineFailureStep(e);
+    //
+    //             // API 호출 성공 후 내부 처리 실패인 경우 (TID가 있어야 함)
+    //             // 하지만 여기서 TID를 알기 어려우므로, KakaoPayData에 TID가 저장되어 있는지 확인하거나
+    //             // 단순히 실패 상태로만 변경할지 결정해야 함.
+    //             // 현재 구조에서는 API 호출 후 TID를 DB에 저장하는 단계가 completePayment에 있으므로,
+    //             // API 호출은 성공했으나 DB 저장이 안 된 상태일 수 있음.
+    //             // 이 경우 TID를 모르므로 망취소(전체 취소)가 어려울 수 있음.
+    //
+    //             // 만약 API 호출 전 실패라면 단순히 FAILED로 변경
+    //             transactionService.markAsFailed(kakaoPayData.getId(), "결제 승인 실패: " + e.getMessage());
+    //
+    //             // 비동기 보상 메시지 발행 (필요한 경우)
+    //             // TID가 없으면 보상 처리가 제한적일 수 있음
+    //             if (kakaoPayData.getTid() != null) {
+    //                 compensatePaymentAsync(kakaoPayData, kakaoPayData.getTid(),
+    //                         parameter.getUserId(), "내부 처리 실패: " + e.getMessage(), failureStep);
+    //             }
+    //         });
+    //     } catch (Exception ex) {
+    //         log.error("보상 처리 중 오류 발생 - orderId: {}", parameter.getOrderId(), ex);
+    //     }
+    // }
 
     /**
      * 카카오페이 승인 API 호출
@@ -137,45 +137,45 @@ public class KakaoPayApproveService {
                 .orElseThrow(() -> new BusinessException(Code.INVALID_KAKAO_API_RESPONSE));
     }
 
-    /**
-     * 비동기 보상 트랜잭션 실행
-     */
-    private void compensatePaymentAsync(KakaoPayData kakaoPayData, String tid, Long userId,
-            String cancelReason, String failureStep) {
-        try {
-            paymentCompensationProducer.sendCompensationMessage(
-                    kakaoPayData.getOrderId(),
-                    tid,
-                    userId,
-                    cancelReason,
-                    failureStep);
-            log.info("보상 트랜잭션 메시지 발행 완료 - orderId: {}", kakaoPayData.getOrderId());
-        } catch (Exception e) {
-            log.error("보상 트랜잭션 메시지 발행 실패 - orderId: {}, error: {}",
-                    kakaoPayData.getOrderId(), e.getMessage(), e);
-            // 동기적으로 보상 처리 시도
-            try {
-                kakaoPayCancelService.compensatePayment(kakaoPayData, cancelReason);
-            } catch (Exception ex) {
-                log.error("동기 보상 처리도 실패 - orderId: {}", kakaoPayData.getOrderId(), ex);
-            }
-        }
-    }
-
-    /**
-     * 실패 단계 판단
-     */
-    private String determineFailureStep(Exception e) {
-        String message = e.getMessage();
-        if (message != null) {
-            if (message.contains("PRODUCT_PROCESSING")) {
-                return "PRODUCT_PROCESSING";
-            } else if (message.contains("ITEM_PURCHASE_CREATION")) {
-                return "ITEM_PURCHASE_CREATION";
-            } else if (message.contains("STATUS_UPDATE")) {
-                return "STATUS_UPDATE";
-            }
-        }
-        return "UNKNOWN";
-    }
+    // /**
+    //  * 비동기 보상 트랜잭션 실행
+    //  */
+    // private void compensatePaymentAsync(KakaoPayData kakaoPayData, String tid, Long userId,
+    //         String cancelReason, String failureStep) {
+    //     try {
+    //         paymentCompensationProducer.sendCompensationMessage(
+    //                 kakaoPayData.getOrderId(),
+    //                 tid,
+    //                 userId,
+    //                 cancelReason,
+    //                 failureStep);
+    //         log.info("보상 트랜잭션 메시지 발행 완료 - orderId: {}", kakaoPayData.getOrderId());
+    //     } catch (Exception e) {
+    //         log.error("보상 트랜잭션 메시지 발행 실패 - orderId: {}, error: {}",
+    //                 kakaoPayData.getOrderId(), e.getMessage(), e);
+    //         // 동기적으로 보상 처리 시도
+    //         try {
+    //             kakaoPayCancelService.compensatePayment(kakaoPayData, cancelReason);
+    //         } catch (Exception ex) {
+    //             log.error("동기 보상 처리도 실패 - orderId: {}", kakaoPayData.getOrderId(), ex);
+    //         }
+    //     }
+    // }
+    //
+    // /**
+    //  * 실패 단계 판단
+    //  */
+    // private String determineFailureStep(Exception e) {
+    //     String message = e.getMessage();
+    //     if (message != null) {
+    //         if (message.contains("PRODUCT_PROCESSING")) {
+    //             return "PRODUCT_PROCESSING";
+    //         } else if (message.contains("ITEM_PURCHASE_CREATION")) {
+    //             return "ITEM_PURCHASE_CREATION";
+    //         } else if (message.contains("STATUS_UPDATE")) {
+    //             return "STATUS_UPDATE";
+    //         }
+    //     }
+    //     return "UNKNOWN";
+    // }
 }
