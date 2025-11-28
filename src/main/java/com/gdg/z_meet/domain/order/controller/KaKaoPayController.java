@@ -1,11 +1,14 @@
 package com.gdg.z_meet.domain.order.controller;
 
 import com.gdg.z_meet.domain.order.converter.KaKaoPayApproveConverter;
+// import com.gdg.z_meet.domain.order.converter.KaKaoPayCancelConverter;
 import com.gdg.z_meet.domain.order.converter.KaKaoPayReadyConverter;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayApproveDTO;
+// import com.gdg.z_meet.domain.order.dto.KaKaoPayCancelDTO;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayReadyDTO;
-import com.gdg.z_meet.domain.order.service.KakaoPayReadyService;
-import com.gdg.z_meet.domain.order.service.KakaoPayApproveService;
+import com.gdg.z_meet.domain.order.service.ready.KakaoPayReadyService;
+import com.gdg.z_meet.domain.order.service.approve.KakaoPayApproveService;
+// import com.gdg.z_meet.domain.order.service.cancel.KakaoPayCancelService;
 import com.gdg.z_meet.global.response.Response;
 import com.gdg.z_meet.global.security.annotation.AuthUser;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,6 +27,7 @@ public class KaKaoPayController {
 
     private final KakaoPayReadyService kaKaoPayReadyService;
     private final KakaoPayApproveService kaKaoPayApproveService;
+    // private final KakaoPayCancelService kaKaoPayCancelService;
 
     @Operation(summary = "결제 준비 API", description = "주문 정보를 받아 사용자가 결제 화면으로 이동하는 '결제 준비'의 단계입니다.")
     @PostMapping("/ready")
@@ -48,4 +52,15 @@ public class KaKaoPayController {
         KaKaoPayApproveDTO.Response response = kaKaoPayApproveService.approve(parameter, idempotencyKey);
         return Response.ok(response);
     }
+
+    // @Operation(summary = "결제 취소 API", description = "카카오페이 결제 취소 요청을 처리합니다.")
+    // @PostMapping("/cancel")
+    // public Response<KaKaoPayCancelDTO.Response> cancel(
+    //         @AuthUser Long userId,
+    //         @Valid @RequestBody KaKaoPayCancelDTO.Request request) {
+    //     
+    //     KaKaoPayCancelDTO.Parameter parameter = KaKaoPayCancelConverter.toParameter(userId, request);
+    //     KaKaoPayCancelDTO.Response response = kaKaoPayCancelService.cancel(parameter, userId);
+    //     return Response.ok(response);
+    // }
 }
