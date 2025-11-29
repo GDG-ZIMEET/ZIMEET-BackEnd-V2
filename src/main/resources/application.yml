@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:mysql://mysql:3306/${DEFAULT_SCHEMA}?serverTimezone=UTC
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    jdbc-url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DEFAULT_SCHEMA:zimeet}?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 80
@@ -10,9 +10,9 @@ spring:
 
   # 네임드 락 전용 DataSource 설정
   datasource-lock:
-    url: jdbc:mysql://mysql:3306/${DEFAULT_SCHEMA}?serverTimezone=UTC
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    jdbc-url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DEFAULT_SCHEMA:zimeet}?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
@@ -28,10 +28,10 @@ spring:
 
   data:
     redis:
-      host: redis
+      host: ${REDIS_HOST:localhost}
       port: 6379
     mongodb:
-      host: mongodb
+      host: ${MONGODB_HOST:localhost}
       port: 27017
       database: ${MONGODB_DATABASE:zimeet}
 
@@ -39,6 +39,20 @@ spring:
     type: caffeine
     caffeine:
       spec: maximumSize=500,expireAfterAccess=3600s
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 2000
+          max-attempts: 3
+        acknowledge-mode: auto
 
 management:
   server:

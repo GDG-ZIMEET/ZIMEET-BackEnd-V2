@@ -1,60 +1,77 @@
-spring:
-  config:
-    activate:
-      on-profile: prod
-  datasource:
-    url: ${MYSQL_URL}
-    username: ${MYSQL_USER}
-    password: ${MYSQL_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      maximum-pool-size: 10
-      minimum-idle: 5
-      connection-test-query: SELECT 1
-      validation-timeout: 5000
-      leak-detection-threshold: 60000
-  jpa:
-    hibernate:
-      ddl-auto: none
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
-    show_sql: false
-  data:
-    redis:
-      host: redis1
-      port: 6379
-      repositories:
-        enabled: false
-    mongodb:
-      host: mongodb1
-      port: 27017
-      database: zimeet
-  mvc:
-    static-path-pattern: /static/**
-  web:
-    resources:
-      static-locations: classpath:/static/, file:/static/
-  rabbitmq:
-    host: rabbitmq
-    port: 5672
-    username: zimeet
-    password: 1234
-    virtual-host: /
-    listener:
-      simple:
-        prefetch: 10         
-        concurrency: 3
-        max-concurrency: 10
-        retry:
-          enabled: true
-          initial-interval: 2000
-          max-attempts: 5
-        acknowledge-mode: auto
-        default-requeue-rejected: false
-        
-scheduling:
-  enabled: true
+#spring:
+#  config:
+#    activate:
+#      on-profile: prod
+#  datasource:
+#    jdbc-url: ${MYSQL_URL}
+#    username: ${MYSQL_USER}
+#    password: ${MYSQL_PASSWORD}
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    hikari:
+#      connection-timeout: 30000
+#      idle-timeout: 600000
+#      max-lifetime: 1800000
+#      maximum-pool-size: 10
+#      minimum-idle: 5
+#      connection-test-query: SELECT 1
+#      validation-timeout: 5000
+#      leak-detection-threshold: 60000
+#
+#  # 네임드 락 전용 DataSource 설정
+#  datasource-lock:
+#    jdbc-url: ${MYSQL_URL}
+#    username: ${MYSQL_USER}
+#    password: ${MYSQL_PASSWORD}
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    hikari:
+#      connection-timeout: 30000
+#      idle-timeout: 600000
+#      max-lifetime: 1800000
+#      maximum-pool-size: 20
+#      minimum-idle: 5
+#      connection-test-query: SELECT 1
+#      validation-timeout: 5000
+#      leak-detection-threshold: 60000
+#      pool-name: HikariCP-Lock
+#  jpa:
+#    hibernate:
+#      ddl-auto: none
+#    properties:
+#      hibernate:
+#        dialect: org.hibernate.dialect.MySQL8Dialect
+#    show_sql: false
+#  data:
+#    redis:
+#      host: redis1
+#      port: 6379
+#      repositories:
+#        enabled: false
+#    mongodb:
+#      host: mongodb1
+#      port: 27017
+#      database: zimeet
+#  mvc:
+#    static-path-pattern: /static/**
+#  web:
+#    resources:
+#      static-locations: classpath:/static/, file:/static/
+#  rabbitmq:
+#    host: rabbitmq
+#    port: 5672
+#    username: zimeet
+#    password: 1234
+#    virtual-host: /
+#    listener:
+#      simple:
+#        prefetch: 10
+#        concurrency: 3
+#        max-concurrency: 10
+#        retry:
+#          enabled: true
+#          initial-interval: 2000
+#          max-attempts: 5
+#        acknowledge-mode: auto
+#        default-requeue-rejected: false
+#
+#scheduling:
+#  enabled: true
