@@ -4,7 +4,7 @@ import com.gdg.z_meet.domain.meeting.repository.UserTeamRepository;
 import com.gdg.z_meet.domain.order.converter.KaKaoPayReadyConverter;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayReadyDTO;
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
-import com.gdg.z_meet.domain.order.entity.ProductType;
+import com.gdg.z_meet.domain.order.entity.enums.ProductType;
 import com.gdg.z_meet.domain.order.repository.KakaoPayDataRepository;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.domain.user.repository.UserRepository;

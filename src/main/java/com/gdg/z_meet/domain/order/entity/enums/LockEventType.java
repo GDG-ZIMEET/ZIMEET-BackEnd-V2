@@ -1,4 +1,4 @@
-package com.gdg.z_meet.domain.order.entity;
+package com.gdg.z_meet.domain.order.entity.enums;
 
 /**
  * 락 모니터링 이벤트 타입

@@ -2,7 +2,8 @@ package com.gdg.z_meet.domain.order.converter;
 
 import com.gdg.z_meet.domain.order.dto.KaKaoPayReadyDTO;
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
-import com.gdg.z_meet.domain.order.entity.ProductType;
+import com.gdg.z_meet.domain.order.entity.enums.ProductType;
+import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
 import com.gdg.z_meet.domain.user.entity.User;
 
 public class KaKaoPayReadyConverter {
@@ -27,7 +28,7 @@ public class KaKaoPayReadyConverter {
         return KakaoPayData.builder()
                 .orderId(orderId)
                 .tid(kakaoApiResponse.getTid())
-                .status(com.gdg.z_meet.domain.order.entity.PaymentStatus.PREPARED)
+                .status(PaymentStatus.PREPARED)
                 .productType(ProductType.valueOf(parameter.getProductType()))
                 .totalPrice(parameter.getTotalPrice())
                 .buyer(buyer)

@@ -1,8 +1,8 @@
 package com.gdg.z_meet.domain.order.integration;
 
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
-import com.gdg.z_meet.domain.order.entity.PaymentStatus;
-import com.gdg.z_meet.domain.order.entity.ProductType;
+import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
+import com.gdg.z_meet.domain.order.entity.enums.ProductType;
 import com.gdg.z_meet.domain.user.entity.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

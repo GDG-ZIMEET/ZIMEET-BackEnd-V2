@@ -1,5 +1,6 @@
 package com.gdg.z_meet.domain.order.entity;
 
+import com.gdg.z_meet.domain.order.entity.enums.LockEventType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
