@@ -1,14 +1,13 @@
 package com.gdg.z_meet.domain.order.client;
 
 import com.gdg.z_meet.domain.order.dto.KaKaoPayApproveDTO;
+import com.gdg.z_meet.domain.order.dto.KaKaoPayCancelDTO;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayReadyDTO;
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +30,9 @@ public class KaKaoPayApiClient {
     
     @Value("${kakao.pay.approve-url}")
     private String APPROVE_URL;
+    
+    @Value("${kakao.pay.cancel-api-url:https://open-api.kakaopay.com/online/v1/payment/cancel}")
+    private String CANCEL_API_URL;
     
     @Value("${kakao.pay.cid}")
     private String cid;
@@ -127,6 +129,45 @@ public class KaKaoPayApiClient {
         params.put("partner_order_id", parameter.getOrderId());    // 내부 주문 ID
         params.put("partner_user_id", String.valueOf(kakaoPayData.getBuyer().getId()));    // 결제한 사용자 id
         params.put("pg_token", parameter.getPgToken());
+
+        return params;
+    }
+
+    // 카카오페이 결제 취소 API
+    public Optional<KaKaoPayCancelDTO.KakaoApiResponse> requestPaymentCancel(
+            KaKaoPayCancelDTO.Parameter parameter) {
+
+        try {
+            Map<String, String> parameters = getCancelParams(parameter);
+            
+            HttpHeaders headers = getHeaders();
+            HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(parameters, headers);
+
+            ResponseEntity<KaKaoPayCancelDTO.KakaoApiResponse> response = restTemplate.postForEntity(
+                    CANCEL_API_URL, requestEntity, KaKaoPayCancelDTO.KakaoApiResponse.class
+            );
+
+            log.info("KaKaoPay 취소 API Response: {}", response.getBody());
+            
+            return Optional.ofNullable(response.getBody());
+        } catch (Exception e) {
+            log.error("카카오페이 결제 취소 API 호출 실패: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    // 결제 취소 파라미터 생성
+    private Map<String, String> getCancelParams(KaKaoPayCancelDTO.Parameter parameter) {
+        Map<String, String> params = new HashMap<>();
+
+        params.put("cid", cid);                      // 가맹점 코드
+        params.put("tid", parameter.getTid());      // 결제 고유번호
+        params.put("cancel_amount", String.valueOf(parameter.getCancelAmount()));  // 취소 금액
+        params.put("cancel_tax_free_amount", String.valueOf(parameter.getCancelTaxFreeAmount() != null ? parameter.getCancelTaxFreeAmount() : 0));  // 취소 비과세 금액
+        
+        if (parameter.getCancelReason() != null && !parameter.getCancelReason().isEmpty()) {
+            params.put("cancel_reason", parameter.getCancelReason());
+        }
 
         return params;
     }
