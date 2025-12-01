@@ -3,6 +3,7 @@ package com.gdg.z_meet.domain.order.service.approve;
 import com.gdg.z_meet.domain.order.client.KaKaoPayApiClient;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayApproveDTO;
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
+import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
 import com.gdg.z_meet.domain.order.repository.KakaoItemPurchaseRepository;
 
 import com.gdg.z_meet.domain.order.service.idempotency.KakaoPayIdempotencyService;
@@ -60,10 +61,29 @@ public class KakaoPayApproveService {
                     throw new BusinessException(Code.INVALID_KAKAO_API_RESPONSE);
                 }
 
+                // UNKNOWN 상태 확인 : 사용자 재시도 시 UNKNOWN 상태 확인 후 후처리(보상) 수행
+                var existingPaymentOpt = transactionService.findKakaoPayData(parameter.getOrderId());
+                if (existingPaymentOpt.isPresent()) {
+                    KakaoPayData existingPayment = existingPaymentOpt.get();
+                    if (existingPayment.getStatus() == PaymentStatus.UNKNOWN) {
+                        log.info("UNKNOWN 상태 결제 재시도 감지 - orderId: {}. 보상 트랜잭션 예약 및 재시도 안내",
+                                parameter.getOrderId());
+
+                        // 보상 트랜잭션 예약 (후처리)
+                        paymentRecoveryService.scheduleRecovery(
+                                parameter.getOrderId(),
+                                existingPayment.getTid(),
+                                "UNKNOWN 상태 재시도에 의한 후처리");
+
+                        // 사용자에게는 재시도 안내 (202 Accepted)
+                        throw new BusinessException(Code.PAYMENT_UNKNOWN_STATUS_RETRY);
+                    }
+                }
+
                 // 1. 결제 시도 (검증 및 상태 변경)
                 KakaoPayData kakaoPayData = transactionService.startPaymentProcessing(parameter);
 
-                // 2. 외부 API 호출
+                // 2. 외부 API 호출(타임아웃 발생 시 API Client에서 자동으로 결제 상태 조회 시도)
                 KaKaoPayApproveDTO.KaKaoApiResponse kakaoApiResponse = callKakaoPayApproveApi(parameter, kakaoPayData);
 
                 log.debug("카카오페이 결제 최종 승인 성공 - orderId: {}", parameter.getOrderId());
@@ -72,26 +92,21 @@ public class KakaoPayApproveService {
                 KaKaoPayApproveDTO.Response response = transactionService.completePayment(
                         kakaoPayData.getId(), kakaoApiResponse, parameter);
 
-                // 응답 캐시
                 if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
                     kakaoPayIdempotencyService.cacheResponse(namespacedKey, response);
                 }
 
                 return response;
             });
+        } catch (BusinessException e) {
+            // 비즈니스 예외는 그대로 전파 (API 호출 실패 등)
+            log.error("결제 승인 처리 실패 (비즈니스 예외) - orderId: {}, error: {}", parameter.getOrderId(), e.getMessage());
+            handlePaymentFailure(parameter.getOrderId(), "결제 승인 실패: " + e.getMessage());
 
+            throw e;
         } catch (Exception e) {
-            log.error("결제 승인 처리 실패 - orderId: {}, error: {}",
-                    parameter.getOrderId(), e.getMessage(), e);
-
-            // 보상 처리 예약 (DB 기반 큐)
-            // TID는 API 호출 성공 후에만 알 수 있는데, 여기서 알 수 없는 경우가 많음.
-            // 하지만 KakaoPayData에 TID가 있다면(API 호출 후 DB 저장 실패 시) 가져올 수 있음.
-            // 여기서는 안전하게 null로 넘기고, Consumer가 조회하도록 함.
-            // 단, API 호출은 성공했으나 DB 저장이 실패한 경우(망취소)를 대비해 TID를 알 수 있다면 넘겨주는 것이 좋음.
-            // 현재 구조상 API 호출 결과(kakaoApiResponse)를 catch 블록에서 알기 어려우므로,
-            // Consumer(Scheduler)가 KakaoPayData를 조회해서 TID가 있으면 취소하는 방식으로 처리.
-            paymentRecoveryService.scheduleRecovery(parameter.getOrderId(), null, "결제 승인 실패: " + e.getMessage());
+            log.error("결제 승인 처리 실패 (예상치 못한 예외) - orderId: {}, error: {}", parameter.getOrderId(), e.getMessage(), e);
+            handlePaymentFailure(parameter.getOrderId(), "결제 승인 실패: " + e.getMessage());
 
             throw e;
         } finally {
@@ -99,6 +114,20 @@ public class KakaoPayApproveService {
             if (isIdempotencyProcessing && idempotencyKey != null && !idempotencyKey.isEmpty()) {
                 kakaoPayIdempotencyService.unmarkAsProcessing(namespacedKey);
             }
+        }
+    }
+
+    /**
+     * 결제 실패 시 보상 트랜잭션 예약 처리
+     */
+    private void handlePaymentFailure(String orderId, String errorMessage) {
+        try {
+            var kakaoPayDataOpt = transactionService.findKakaoPayData(orderId);
+            String tid = kakaoPayDataOpt.map(KakaoPayData::getTid).orElse(null);
+
+            paymentRecoveryService.scheduleRecovery(orderId, tid, errorMessage);
+        } catch (Exception ex) {
+            log.error("보상 트랜잭션 예약 중 오류 - orderId: {}", orderId, ex);
         }
     }
 

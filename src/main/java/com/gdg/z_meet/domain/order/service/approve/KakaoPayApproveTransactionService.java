@@ -102,23 +102,6 @@ public class KakaoPayApproveTransactionService {
     }
 
     /**
-     * 결제 실패 처리
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markAsFailed(Long kakaoPayDataId, String reason) {
-        try {
-            KakaoPayData kakaoPayData = kakaoPayDataRepository.findById(kakaoPayDataId)
-                    .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
-
-            kakaoPayData.setStatus(PaymentStatus.FAILED);
-            kakaoPayDataRepository.save(kakaoPayData);
-            log.warn("결제 실패 처리 완료 - orderId: {}, reason: {}", kakaoPayData.getOrderId(), reason);
-        } catch (Exception e) {
-            log.error("결제 실패 상태 변경 중 오류 발생 - kakaoPayDataId: {}", kakaoPayDataId, e);
-        }
-    }
-
-    /**
      * 주문 ID로 결제 데이터 조회 (보상 트랜잭션용)
      */
     @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)

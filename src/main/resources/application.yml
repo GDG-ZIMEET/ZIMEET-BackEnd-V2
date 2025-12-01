@@ -89,9 +89,12 @@ kakao:
     cid: TC0ONETIME
     ready-url: https://open-api.kakaopay.com/online/v1/payment/ready
     approve-url: https://open-api.kakaopay.com/online/v1/payment/approve
+    inquiry-api-url: https://open-api.kakaopay.com/online/v1/payment/order
     approval-url: ${KAKAO_PAY_APPROVAL_URL:http://localhost:3000/purchase/approve}
     cancel-url: ${KAKAO_PAY_CANCEL_URL:http://localhost:3000/purchase/cancel}
     fail-url: ${KAKAO_PAY_FAIL_URL:http://localhost:3000/purchase/fail}
+    connection-timeout: 5000  # Connection Timeout: 5초
+    read-timeout: 10000       # Read Timeout: 10초
 
 firebase:
   admin-sdk: ${FIREBASE_ADMIN_SDK_PATH}

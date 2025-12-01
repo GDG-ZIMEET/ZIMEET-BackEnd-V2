@@ -65,7 +65,7 @@ public class KaKaoPayController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
 
         KaKaoPayCancelDTO.Parameter parameter = KaKaoPayCancelConverter.toParameter(userId, request);
-        KaKaoPayCancelDTO.Response response = kaKaoPayCancelService.cancel(parameter, userId, idempotencyKey);
+        KaKaoPayCancelDTO.Response response = kaKaoPayCancelService.cancel(parameter, userId);
         return Response.ok(response);
     }
 }
