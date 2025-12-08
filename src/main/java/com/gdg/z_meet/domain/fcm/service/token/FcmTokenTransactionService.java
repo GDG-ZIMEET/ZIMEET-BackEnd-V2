@@ -47,8 +47,8 @@ public class FcmTokenTransactionService {
 
         String newToken = req.getFcmToken();
 
-        // 기존 토큰 조회 및 락 획득
-        Optional<FcmToken> existingOpt = fcmTokenRepository.findByUserForUpdate(user);
+        // 기존 토큰 조회 (비관적 락 제거 -> Unique 제약조건 위반 유도)
+        Optional<FcmToken> existingOpt = fcmTokenRepository.findByUser(user);
 
         if (existingOpt.isPresent()) {
             FcmToken existing = existingOpt.get();
@@ -65,10 +65,8 @@ public class FcmTokenTransactionService {
                     FcmToken.builder()
                             .user(user)
                             .token(newToken)
-                            .build()
-            );
+                            .build());
             log.debug("FCM 토큰 생성 완료: userId={}", user.getId());
         }
     }
 }
-
