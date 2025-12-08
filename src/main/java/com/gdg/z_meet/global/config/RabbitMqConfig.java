@@ -14,18 +14,23 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMqConfig {
-    
-    public static final String FCM_EXCHANGE = "fcm.exchange";      // 메시지 컨슈머 라우터
-    public static final String FCM_QUEUE = "fcm.queue";            // 메시지 적재 큐
-    public static final String FCM_ROUTING_KEY = "fcm.send";       // Queue 로 메시지를 보내는데 쓰이는 키
-    
+
+    public static final String FCM_EXCHANGE = "fcm.exchange"; // 메시지 컨슈머 라우터
+
+    // Broadcast (전체 발송)
+    public static final String FCM_BROADCAST_QUEUE = "fcm.broadcast.queue";
+    public static final String FCM_BROADCAST_ROUTING_KEY = "fcm.broadcast.send";
+
+    // Single (단건/테스트 발송)
+    public static final String FCM_SINGLE_QUEUE = "fcm.single.queue";
+    public static final String FCM_SINGLE_ROUTING_KEY = "fcm.single.send";
+
     public static final String FCM_DLX_EXCHANGE = "fcm.dlx.exchange";
     public static final String FCM_DLQ_QUEUE = "fcm.dlq.queue";
     public static final String FCM_DLQ_ROUTING_KEY = "fcm.dlq";
 
-
     /**
-     *  라우팅 키가 정확히 일치해야 Queue 로 전달, 서버 재시작해도 큐 유지, 사용자 빠져나가도 큐 유지
+     * 라우팅 키가 정확히 일치해야 Queue 로 전달, 서버 재시작해도 큐 유지, 사용자 빠져나가도 큐 유지
      */
     @Bean
     public DirectExchange fcmExchange() {
@@ -33,11 +38,11 @@ public class RabbitMqConfig {
     }
 
     /**
-     *  발행된 메시지가 TTL 을 초과하면, Dead Letter 처리
+     * Broadcast Queue
      */
     @Bean
-    public Queue fcmQueue() {
-        return QueueBuilder.durable(FCM_QUEUE)
+    public Queue fcmBroadcastQueue() {
+        return QueueBuilder.durable(FCM_BROADCAST_QUEUE)
                 .withArgument("x-dead-letter-exchange", FCM_DLX_EXCHANGE)
                 .withArgument("x-dead-letter-routing-key", FCM_DLQ_ROUTING_KEY)
                 .withArgument("x-message-ttl", 300000) // 5분 TTL
@@ -45,8 +50,25 @@ public class RabbitMqConfig {
     }
 
     @Bean
-    public Binding fcmBinding() {
-        return BindingBuilder.bind(fcmQueue()).to(fcmExchange()).with(FCM_ROUTING_KEY);
+    public Binding fcmBroadcastBinding() {
+        return BindingBuilder.bind(fcmBroadcastQueue()).to(fcmExchange()).with(FCM_BROADCAST_ROUTING_KEY);
+    }
+
+    /**
+     * Single Queue
+     */
+    @Bean
+    public Queue fcmSingleQueue() {
+        return QueueBuilder.durable(FCM_SINGLE_QUEUE)
+                .withArgument("x-dead-letter-exchange", FCM_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", FCM_DLQ_ROUTING_KEY)
+                .withArgument("x-message-ttl", 300000) // 5분 TTL
+                .build();
+    }
+
+    @Bean
+    public Binding fcmSingleBinding() {
+        return BindingBuilder.bind(fcmSingleQueue()).to(fcmExchange()).with(FCM_SINGLE_ROUTING_KEY);
     }
 
     /**
@@ -79,8 +101,7 @@ public class RabbitMqConfig {
 
     @Bean
     public org.springframework.amqp.support.converter.DefaultClassMapper classMapper() {
-        org.springframework.amqp.support.converter.DefaultClassMapper classMapper = 
-            new org.springframework.amqp.support.converter.DefaultClassMapper();
+        org.springframework.amqp.support.converter.DefaultClassMapper classMapper = new org.springframework.amqp.support.converter.DefaultClassMapper();
         classMapper.setTrustedPackages("java.util", "java.lang", "com.gdg.z_meet.domain.fcm.dto");
         return classMapper;
     }

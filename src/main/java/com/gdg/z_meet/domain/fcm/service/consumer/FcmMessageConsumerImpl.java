@@ -21,8 +21,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- *  Message Consumer 로,
- *  RabbitMQ 에서 메시지를 꺼내 FCM 관련 로직 처리
+ * Message Consumer 로,
+ * RabbitMQ 에서 메시지를 꺼내 FCM 관련 로직 처리
  */
 @Service
 @RequiredArgsConstructor
@@ -33,26 +33,43 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
     private final FcmTokenRepository fcmTokenRepository;
 
     /**
-     *  무효한 토큰으로 간주할 에러 코드들
+     * 무효한 토큰으로 간주할 에러 코드들
      */
     private static final Set<String> DELETABLE_ERROR_CODES = Set.of(
             "unregistered",
-            "invalid-argument", 
+            "invalid-argument",
             "invalid-arguments",
             "registration-token-not-registered",
             "messaging/invalid-registration-token",
-            "messaging/registration-token-not-registered"
-    );
+            "messaging/registration-token-not-registered");
 
     /**
-     *  FCM 전용 큐에 바인딩
-     *  @RabbitListener(queues = RabbitMqConfig.FCM_QUEUE) : Spring 이 알아서 메시지를 꺼냄 → JSON 역직렬화 → fcmMessage 객체로 바인딩 → 메서드 실행
+     * FCM 전용 큐에 바인딩
+     * 
+     * @RabbitListener(queues = RabbitMqConfig.FCM_QUEUE) : Spring 이 알아서 메시지를 꺼냄 →
+     *                        JSON 역직렬화 → fcmMessage 객체로 바인딩 → 메서드 실행
      */
-    @RabbitListener(queues = RabbitMqConfig.FCM_QUEUE)
+    /**
+     * Broadcast Queue Listener
+     */
+    @RabbitListener(queues = RabbitMqConfig.FCM_BROADCAST_QUEUE)
     @Transactional
+    public void consumeBroadcastMessage(FcmMessageRequest fcmMessage) {
+        processFcmMessage(fcmMessage);
+    }
+
+    /**
+     * Single Queue Listener
+     */
+    @RabbitListener(queues = RabbitMqConfig.FCM_SINGLE_QUEUE)
+    @Transactional
+    public void consumeSingleMessage(FcmMessageRequest fcmMessage) {
+        processFcmMessage(fcmMessage);
+    }
+
     @Override
     public void processFcmMessage(FcmMessageRequest fcmMessage) {
-        log.info("FCM 메시지 처리 시작: messageId={}, type={}", 
+        log.info("FCM 메시지 처리 시작: messageId={}, type={}",
                 fcmMessage.getMessageId(), fcmMessage.getType());
 
         try {
@@ -61,27 +78,28 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
                 case TEST -> processTestMessage(fcmMessage);
                 case SINGLE -> processSingleMessage(fcmMessage);
             }
-            
+
             log.info("FCM 메시지 처리 완료: messageId={}", fcmMessage.getMessageId());
-            
+
         } catch (Exception e) {
-            log.error("FCM 메시지 처리 실패: messageId={}, error={}", 
+            log.error("FCM 메시지 처리 실패: messageId={}, error={}",
                     fcmMessage.getMessageId(), e.getMessage(), e);
-            throw new AmqpRejectAndDontRequeueException("FCM 메시지 처리 실패로 재큐 방지: messageId=" + fcmMessage.getMessageId(), e);
+            throw new AmqpRejectAndDontRequeueException("FCM 메시지 처리 실패로 재큐 방지: messageId=" + fcmMessage.getMessageId(),
+                    e);
         }
     }
 
     private void processBroadcastMessage(FcmMessageRequest fcmMessage) {
         List<FcmToken> tokens = fcmTokenRepository.findAllByUserPushAgreeTrue();
-        
+
         if (tokens.isEmpty()) {
             log.info("브로드캐스트 대상 사용자가 없습니다.");
             return;
         }
-        
+
         for (FcmToken userToken : tokens) {
-            sendFcmMessage(userToken.getToken(), userToken.getUser().getId(), 
-                         fcmMessage.getTitle(), fcmMessage.getBody(), userToken);
+            sendFcmMessage(userToken.getToken(), userToken.getUser().getId(),
+                    fcmMessage.getTitle(), fcmMessage.getBody(), userToken);
         }
     }
 
@@ -90,18 +108,18 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
             log.warn("단일 메시지의 사용자 ID가 없습니다.");
             return;
         }
-        
+
         // userId로 FCM 토큰 조회
         User user = User.builder().id(fcmMessage.getUserId()).build();
         FcmToken userToken = fcmTokenRepository.findByUser(user).orElse(null);
-        
+
         if (userToken == null) {
             log.warn("사용자의 FCM 토큰을 찾을 수 없습니다: userId={}", fcmMessage.getUserId());
             return;
         }
-        
-        sendFcmMessage(userToken.getToken(), fcmMessage.getUserId(), 
-                     fcmMessage.getTitle(), fcmMessage.getBody(), userToken);
+
+        sendFcmMessage(userToken.getToken(), fcmMessage.getUserId(),
+                fcmMessage.getTitle(), fcmMessage.getBody(), userToken);
     }
 
     private void processTestMessage(FcmMessageRequest fcmMessage) {
@@ -119,7 +137,7 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
 
     private void sendFcmMessage(String token, Long userId, String title, String body, FcmToken tokenEntity) {
         if (!isValidToken(token)) {
-            log.warn("FCM 토큰이 유효하지 않습니다: userId={}, token={}", userId, 
+            log.warn("FCM 토큰이 유효하지 않습니다: userId={}, token={}", userId,
                     token != null ? maskToken(token) : "null");
             return;
         }
@@ -129,7 +147,7 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
         try {
             String response = FirebaseMessaging.getInstance().send(message);
             log.info("FCM 전송 성공: userId={}, response={}", userId, response);
-            
+
         } catch (FirebaseMessagingException e) {
             log.warn("FCM 전송 실패: userId={}, error={}", userId, e.getMessage());
 
@@ -139,18 +157,18 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
             }
         }
     }
-    
+
     private boolean isValidToken(String token) {
         return token != null && !token.isBlank() && !"null".equalsIgnoreCase(token);
     }
-    
+
     private String maskToken(String token) {
         if (token == null || token.length() <= 10) {
             return "***";
         }
         return token.substring(0, 10) + "...";
     }
-    
+
     private Message buildFcmMessage(String token, String title, String body) {
         return Message.builder()
                 .setToken(token)
@@ -164,22 +182,22 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
     private void handleInvalidToken(FirebaseMessagingException e, FcmToken tokenEntity, String token, Long userId) {
         String errorCode = e.getErrorCode() != null ? e.getErrorCode().toString().toLowerCase() : "";
         String errorMessage = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
-        
+
         // 에러 코드 또는 에러 메시지로 판단
         if (isDeleteableErrorCode(errorCode) || isDeleteableErrorMessage(errorMessage)) {
             fcmTokenRepository.delete(tokenEntity);
-            log.warn("무효한 FCM 토큰 삭제: token={}, userId={}, errorCode={}, message={}", 
+            log.warn("무효한 FCM 토큰 삭제: token={}, userId={}, errorCode={}, message={}",
                     maskToken(token), userId, errorCode, e.getMessage());
         }
     }
-    
+
     private boolean isDeleteableErrorCode(String errorCode) {
         return DELETABLE_ERROR_CODES.contains(errorCode);
     }
-    
+
     private boolean isDeleteableErrorMessage(String errorMessage) {
-        return errorMessage.contains("unregistered") || 
-               errorMessage.contains("not-registered") ||
-               errorMessage.contains("invalid") && errorMessage.contains("token");
+        return errorMessage.contains("unregistered") ||
+                errorMessage.contains("not-registered") ||
+                errorMessage.contains("invalid") && errorMessage.contains("token");
     }
 }
