@@ -4,8 +4,8 @@ import com.gdg.z_meet.domain.order.converter.KaKaoPayApproveConverter;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayApproveDTO;
 import com.gdg.z_meet.domain.order.entity.ItemPurchase;
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
-import com.gdg.z_meet.domain.order.entity.PaymentStatus;
-import com.gdg.z_meet.domain.order.entity.ProductType;
+import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
+import com.gdg.z_meet.domain.order.entity.enums.ProductType;
 import com.gdg.z_meet.domain.order.repository.KakaoItemPurchaseRepository;
 import com.gdg.z_meet.domain.order.repository.KakaoPayDataRepository;
 import com.gdg.z_meet.domain.user.entity.User;
@@ -99,23 +99,6 @@ public class KakaoPayApproveTransactionService {
         }
 
         return KaKaoPayApproveConverter.toResponse(kakaoApiResponse, parameter.getOrderId());
-    }
-
-    /**
-     * 결제 실패 처리
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markAsFailed(Long kakaoPayDataId, String reason) {
-        try {
-            KakaoPayData kakaoPayData = kakaoPayDataRepository.findById(kakaoPayDataId)
-                    .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
-
-            kakaoPayData.setStatus(PaymentStatus.FAILED);
-            kakaoPayDataRepository.save(kakaoPayData);
-            log.warn("결제 실패 처리 완료 - orderId: {}, reason: {}", kakaoPayData.getOrderId(), reason);
-        } catch (Exception e) {
-            log.error("결제 실패 상태 변경 중 오류 발생 - kakaoPayDataId: {}", kakaoPayDataId, e);
-        }
     }
 
     /**

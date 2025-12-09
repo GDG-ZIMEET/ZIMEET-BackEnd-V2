@@ -1,4 +1,4 @@
-package com.gdg.z_meet.domain.order.entity;
+package com.gdg.z_meet.domain.order.entity.enums;
 
 import lombok.Getter;
 
@@ -8,7 +8,8 @@ public enum PaymentStatus {
     PROCESSING("결제 처리 중"),
     APPROVED("결제 승인 완료"),
     CANCELLED("결제 취소"),
-    FAILED("결제 실패");
+    FAILED("결제 실패"),
+    UNKNOWN("결제 상태 불명확 - 재시도 필요");
 
     private final String description;
 

@@ -1,5 +1,7 @@
 package com.gdg.z_meet.domain.order.entity;
 
+import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
+import com.gdg.z_meet.domain.order.entity.enums.ProductType;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.global.common.BaseEntity;
 import io.swagger.v3.oas.annotations.media.Schema;

@@ -3,7 +3,7 @@ package com.gdg.z_meet.domain.order.service.approve;
 import com.gdg.z_meet.domain.meeting.entity.Team;
 import com.gdg.z_meet.domain.meeting.entity.UserTeam;
 import com.gdg.z_meet.domain.meeting.repository.UserTeamRepository;
-import com.gdg.z_meet.domain.order.entity.ProductType;
+import com.gdg.z_meet.domain.order.entity.enums.ProductType;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.domain.user.entity.UserProfile;
 import com.gdg.z_meet.domain.user.repository.UserProfileRepository;
