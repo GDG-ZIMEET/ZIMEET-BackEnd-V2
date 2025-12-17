@@ -1,4 +1,11 @@
+server:
+  port: 8080
+  shutdown: graceful  # Graceful shutdown 활성화
+
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s  # 종료 시 진행 중인 요청 완료 대기 시간
+    
   datasource:
     jdbc-url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DEFAULT_SCHEMA:zimeet}?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
     username: ${DB_USERNAME:root}
