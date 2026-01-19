@@ -45,7 +45,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.startsWith("/api/booths") || path.startsWith("/api/event")
                 || path.startsWith("/api/user")
                 || path.startsWith("/api/ws") || path.startsWith("/api/ws/info")
-                || path.startsWith("/ws") || path.startsWith("/ws/info");
+                || path.startsWith("/ws") || path.startsWith("/ws/info")
+                || path.startsWith("/api/test");
     }
 
     @Override
@@ -79,7 +80,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     if (userIdStr != null) {
                         Long userId = Long.parseLong(userIdStr);
                         String studentNumber = jwtUtil.getStudentNumberFromToken(refreshToken);
-                        String newAccessToken = jwtUtil.getToken(studentNumber, userId, new Date(), jwtUtil.getAccessTokenValidTime());
+                        String newAccessToken = jwtUtil.getToken(studentNumber, userId, new Date(),
+                                jwtUtil.getAccessTokenValidTime());
 
                         response.setHeader("Authorization", BEARER_PREFIX + newAccessToken);
 

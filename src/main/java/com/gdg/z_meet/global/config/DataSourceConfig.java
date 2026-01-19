@@ -1,6 +1,9 @@
 package com.gdg.z_meet.global.config;
 
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
@@ -8,23 +11,42 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import javax.sql.DataSource;
 
+@Slf4j
 @Configuration
 public class DataSourceConfig {
 
     @Primary
     @Bean
     @ConfigurationProperties(prefix = "spring.datasource")
-    public DataSource dataSource() {
-        return DataSourceBuilder.create()
+    public HikariDataSource dataSource() {
+        HikariDataSource ds = DataSourceBuilder.create()
                 .type(HikariDataSource.class)
                 .build();
+        ds.setMaximumPoolSize(5); // 비즈니스 풀 5개 강제 설정
+        return ds;
     }
 
     @Bean(name = "lockDataSource")
     @ConfigurationProperties(prefix = "spring.datasource-lock")
-    public DataSource lockDataSource() {
-        return DataSourceBuilder.create()
+    public HikariDataSource lockDataSource() {
+        HikariDataSource ds = DataSourceBuilder.create()
                 .type(HikariDataSource.class)
                 .build();
+        ds.setMaximumPoolSize(100); // 락 풀 100개 강제 설정
+        return ds;
+    }
+
+    @Bean
+    public CommandLineRunner logPoolSize(
+            DataSource dataSource,
+            @Qualifier("lockDataSource") DataSource lockDataSource) {
+        return args -> {
+            if (dataSource instanceof HikariDataSource ds) {
+                log.info("[Pool Config] Main Business Pool Size: {}", ds.getMaximumPoolSize());
+            }
+            if (lockDataSource instanceof HikariDataSource ds) {
+                log.info("[Pool Config] Lock Pool Size: {}", ds.getMaximumPoolSize());
+            }
+        };
     }
 }
