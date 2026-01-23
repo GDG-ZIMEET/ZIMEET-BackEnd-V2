@@ -8,10 +8,9 @@ import com.gdg.z_meet.domain.order.repository.KakaoItemPurchaseRepository;
 
 import com.gdg.z_meet.domain.order.service.idempotency.KakaoPayIdempotencyService;
 import com.gdg.z_meet.domain.order.service.locking.KakaoPayLockService;
-// import com.gdg.z_meet.domain.order.service.PaymentCompensationProducer;
-// import com.gdg.z_meet.domain.order.service.cancel.KakaoPayCancelService;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +33,7 @@ public class KakaoPayApproveService {
      * 2. Confirm: 외부 API 호출 및 완료 처리
      * 3. Cancel: 실패 시 보상 트랜잭션
      */
+    @Bulkhead(name = "paymentBulkhead")
     public KaKaoPayApproveDTO.Response approve(KaKaoPayApproveDTO.Parameter parameter, String idempotencyKey) {
         // 멱등성 키 네임스페이스: userId:idempotencyKey
         final String namespacedKey = (idempotencyKey == null || idempotencyKey.isEmpty())

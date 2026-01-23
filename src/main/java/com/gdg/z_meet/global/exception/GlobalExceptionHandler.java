@@ -2,6 +2,7 @@ package com.gdg.z_meet.global.exception;
 
 import com.gdg.z_meet.global.response.Code;
 import com.gdg.z_meet.global.response.Response;
+import io.github.resilience4j.bulkhead.BulkheadFullException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.BeanCreationException;
@@ -41,14 +42,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(GlobalException.class)
     public ResponseEntity<Response<Void>> globalExceptionHandler(GlobalException ex) {
-        
+
         return ResponseEntity
                 .status(ex.getReason().getStatus())
                 .body(Response.fail(ex.getCode()));
     }
 
     @Override
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
 
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors()
@@ -60,13 +62,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @Override
-    protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(Response.fail(Code.BAD_REQUEST, ex.getMessage()));
     }
-
 
     @ExceptionHandler(BeanCreationException.class)
     public ResponseEntity<Object> handleBeanCreationException(BeanCreationException ex) {
@@ -180,35 +182,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Response.fail(Code.INTERNAL_SERVER_ERROR));
     }
-}
 
-//
-//@Override
-//protected ResponseEntity<Object> handleExceptionInternal(
-//        Exception ex,
-//        Object body,
-//        HttpHeaders headers,
-//        HttpStatusCode status,
-//        WebRequest request) {
-//
-//    if (body == null) {
-//        body = Code.INTERNAL_SERVER_ERROR.getReason();
-//    }
-//
-//    return new ResponseEntity<>(body, headers, status);
-//}
-//
-//protected ResponseEntity<Object> handleExceptionInternal(Exception e, ReasonDTO reason,
-//                                                       HttpHeaders headers, HttpServletRequest request) {
-//
-//    Response<Object> body = Response.fail(reason.getCode());
-//
-//    WebRequest webRequest = new ServletWebRequest(request);
-//    return super.handleExceptionInternal(
-//            e,
-//            body,
-//            headers,
-//            reason.getHttpStatus(),
-//            webRequest
-//    );
-//}
+    @ExceptionHandler(BulkheadFullException.class)
+    public ResponseEntity<Response<Void>> handleBulkheadFullException(
+            io.github.resilience4j.bulkhead.BulkheadFullException ex) {
+        log.warn("Bulkhead is full: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(Response.fail(Code.TOO_MANY_REQUESTS));
+    }
+}

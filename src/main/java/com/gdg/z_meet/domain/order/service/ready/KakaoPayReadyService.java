@@ -7,6 +7,7 @@ import com.gdg.z_meet.domain.order.service.idempotency.KakaoPayIdempotencyServic
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class KakaoPayReadyService {
     private final KakaoPayIdempotencyService kakaoPayIdempotencyService;
     private final KakaoPayReadyTransactionService transactionService;
 
+    @Bulkhead(name = "paymentBulkhead")
     public KaKaoPayReadyDTO.Response ready(KaKaoPayReadyDTO.Parameter parameter, String idempotencyKey) {
         String namespacedKey = null;
         boolean isIdempotencyProcessing = false;

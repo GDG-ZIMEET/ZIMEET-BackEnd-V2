@@ -12,7 +12,8 @@ spring:
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 80
+      maximum-pool-size: 150
+      connection-timeout: 5000
       pool-name: HikariCP-Business
 
   # 네임드 락 전용 DataSource 설정
@@ -24,6 +25,13 @@ spring:
     hikari:
       maximum-pool-size: 20
       pool-name: HikariCP-Lock
+
+resilience4j:
+  bulkhead:
+    instances:
+      paymentBulkhead:
+        maxConcurrentCalls: 140
+        maxWaitDuration: 0 # 대기 없이 즉시 429 에러 반환 (Backpressure)
   jpa:
     hibernate:
       ddl-auto: update
