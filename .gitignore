@@ -40,6 +40,8 @@ replay_pid*
 *.iml
 *.iws
 *.ipr
+# VS Code
+.vscode/
 
 # macOS
 .DS_Store
@@ -57,11 +59,13 @@ docker-compose.k6.yml
 docker-compose.prod.no-graceful.yml
 run-k6-only.sh
 test-*.sh
-GRACEFUL_SHUTDOWN_TEST.md
+# Documentation
+docs/
+*.md
+!README.md
+
+# nGrinder
 ngrinder/
 .ngrinder/
 *-agent/
 *-controller/
-
-HELP.md
-FCM_NOTIFICATION_ARCHITECTURE.md
