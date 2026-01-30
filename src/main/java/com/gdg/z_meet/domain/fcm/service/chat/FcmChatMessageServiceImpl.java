@@ -8,7 +8,7 @@ import com.gdg.z_meet.domain.chat.entity.TeamChatRoom;
 import com.gdg.z_meet.domain.chat.repository.ChatRoomRepository;
 import com.gdg.z_meet.domain.chat.repository.JoinChatRepository;
 import com.gdg.z_meet.domain.chat.repository.TeamChatRoomRepository;
-import com.gdg.z_meet.global.client.FcmMessageClient;
+import com.gdg.z_meet.domain.fcm.service.producer.FcmMessageProducer;
 import com.gdg.z_meet.domain.meeting.entity.Team;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.global.exception.BusinessException;
@@ -21,23 +21,21 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class FcmChatMessageServiceImpl implements FcmChatMessageService {
 
-    private final FcmMessageClient fcmMessageClient;
+    private final FcmMessageProducer fcmMessageProducer;
     private final ChatRoomRepository chatRoomRepository;
     private final TeamChatRoomRepository teamChatRoomRepository;
     private final JoinChatRepository joinChatRepository;
-
 
     @Override
     public void messagingChat(ChatMessageRes chatMessageRes) {
         Long roomId = chatMessageRes.getRoomId();
         Long senderId = chatMessageRes.getSenderId();
-        String body = chatMessageRes.getContent();        // 채팅 내용 그대로 전달
+        String body = chatMessageRes.getContent(); // 채팅 내용 그대로 전달
 
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(Code.CHATROOM_NOT_FOUND));
@@ -81,14 +79,10 @@ public class FcmChatMessageServiceImpl implements FcmChatMessageService {
 
         int successCount = 0;
         for (User user : recipients) {
-            boolean success = fcmMessageClient.sendFcmMessage(user.getId(), title, body);
-            if (!success) {
-                log.warn("FCM 메시지 전송 실패 - userId: {}", user.getId());
-            } else {
-                successCount++;
-            }
+            fcmMessageProducer.sendSingleMessage(user.getId(), title, body);
+            successCount++;
         }
-        log.info("FCM 전송 완료 - roomId: {}, 총 대상: {}, 성공 알림 수: {}", roomId, recipients.size(), successCount);
+        log.debug("FCM 큐 적재 완료 - roomId: {}, 총 대상: {}, 성공 적재 수: {}", roomId, recipients.size(), successCount);
     }
 
     private List<User> findRecipients(Long roomId, Long senderId) {
@@ -107,10 +101,7 @@ public class FcmChatMessageServiceImpl implements FcmChatMessageService {
         String title = generateOpenChatTitle(user, chatRoom);
         String body = "두근두근💗 새로운 사람들과 인사부터 시작해보세요!";
 
-        boolean success = fcmMessageClient.sendFcmMessage(user.getId(), title, body);
-        if (!success) {
-            log.warn("FCM 채팅방 열림 관련 메시지 전송 실패 - userId: {}}", user.getId());
-        }
+        fcmMessageProducer.sendSingleMessage(user.getId(), title, body);
     }
 
     private String generateOpenChatTitle(User user, ChatRoom chatRoom) {
@@ -145,4 +136,3 @@ public class FcmChatMessageServiceImpl implements FcmChatMessageService {
         }
     }
 }
-
