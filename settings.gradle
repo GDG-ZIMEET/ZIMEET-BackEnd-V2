@@ -1,1 +1,5 @@
-rootProject.name = 'gdg.z-meet'
+rootProject.name = 'zi-meet'
+
+include 'zi-meet-core'
+include 'zi-meet-api'
+include 'zi-meet-worker'

@@ -48,3 +48,17 @@ src/main/resources/firebase/*.json
 # Gradle
 .gradle/
 build/
+.gradle
+**/build/
+
+# Performance Testing (nGrinder / K6)
+k6/
+docker-compose.k6.yml
+docker-compose.prod.no-graceful.yml
+run-k6-only.sh
+test-*.sh
+GRACEFUL_SHUTDOWN_TEST.md
+ngrinder/
+.ngrinder/
+*-agent/
+*-controller/

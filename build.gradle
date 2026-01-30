@@ -1,109 +1,45 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '3.3.1'
-	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.springframework.boot' version '3.3.1' apply false
+	id 'io.spring.dependency-management' version '1.1.7' apply false
 	id 'jacoco'
 }
 
-group = 'com.example'
-version = '0.0.1-SNAPSHOT'
+allprojects {
+	group = 'com.gdg'
+	version = '0.0.1-SNAPSHOT'
 
-java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
+	repositories {
+		mavenCentral()
 	}
 }
 
-configurations {
-	compileOnly {
-		extendsFrom annotationProcessor
+subprojects {
+	apply plugin: 'java'
+	apply plugin: 'org.springframework.boot'
+	apply plugin: 'io.spring.dependency-management'
+	apply plugin: 'jacoco'
+
+	java {
+		toolchain {
+			languageVersion = JavaLanguageVersion.of(17)
+		}
 	}
-}
 
-repositories {
-	mavenCentral()
-}
+	dependencies {
+		compileOnly 'org.projectlombok:lombok'
+		annotationProcessor 'org.projectlombok:lombok'
+		testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	}
 
-dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0'
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation 'mysql:mysql-connector-java:8.0.30'
-	implementation 'com.h2database:h2:2.2.220'
-	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	configurations {
+		compileOnly {
+			extendsFrom annotationProcessor
+		}
+	}
 
-	compileOnly 'org.projectlombok:lombok'
-	developmentOnly 'org.springframework.boot:spring-boot-devtools'
-	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-	// security & jwt
-	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
-	implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
-	implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
-	implementation 'org.springframework.boot:spring-boot-starter-security'
-
-	// websocket
-	implementation 'org.springframework.boot:spring-boot-starter-websocket'
-	implementation 'org.webjars:sockjs-client:1.5.1'
-	implementation 'org.webjars:stomp-websocket:2.3.4'
-
-	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-hibernate5-jakarta:2.17.1'
-	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
-	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
-
-	// firebase
-	implementation 'com.google.firebase:firebase-admin:9.2.0'
-	implementation 'com.fasterxml.jackson.core:jackson-core:2.16.1'
-
-	// RabbitMQ
-	implementation 'org.springframework.boot:spring-boot-starter-amqp'
-
-	// openFeign
-	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign:4.0.3'
-	implementation 'org.springframework.cloud:spring-cloud-starter-loadbalancer'
-	implementation platform("org.springframework.cloud:spring-cloud-dependencies:2023.0.1")
-
-	implementation 'com.googlecode.json-simple:json-simple:1.1.1'
-
-	// QueryDSL
-	implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
-	annotationProcessor "com.querydsl:querydsl-apt:${dependencyManagement.importedProperties['querydsl.version']}:jakarta"
-	annotationProcessor "jakarta.annotation:jakarta.annotation-api"
-	annotationProcessor "jakarta.persistence:jakarta.persistence-api"
-
-	// Monitoring
-	implementation 'org.springframework.boot:spring-boot-starter-actuator'
-	implementation 'io.micrometer:micrometer-registry-prometheus'
-}
-
-// plain jar 생성 X 설정
-jar {
-	enabled = false
-}
-
-tasks.named('test') {
-	useJUnitPlatform()
-	exclude '**/ZiMeetApplicationTests.class'
-	finalizedBy 'jacocoTestReport'
-	maxParallelForks = 1  // CI 환경에서 테이블 생성 순서 문제 방지
-}
-
-clean {
-	delete file('src/main/generated')
-}
-
-jacoco {
-	toolVersion = "0.8.11" // 최신 안정 버전
-}
-
-jacocoTestReport {
-	dependsOn test
-	reports {
-		xml.required = true
-		csv.required = false
-		html.required = true
+	test {
+		useJUnitPlatform()
+		finalizedBy 'jacocoTestReport'
 	}
 }

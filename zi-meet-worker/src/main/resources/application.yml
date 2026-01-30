@@ -1,0 +1,6 @@
+server:
+  port: 8081
+
+spring:
+  main:
+    web-application-type: none # 워커는 웹 서버가 필요 없음 (필요시 servlet으로 변경)
