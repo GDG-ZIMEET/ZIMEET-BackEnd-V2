@@ -33,7 +33,7 @@ replay_pid*
 *.env
 
 # Firebase service account keys
-src/main/resources/firebase/*.json
+**/firebase/*.json
 
 # IntelliJ IDEA
 .idea/
