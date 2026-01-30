@@ -62,3 +62,6 @@ ngrinder/
 .ngrinder/
 *-agent/
 *-controller/
+
+HELP.md
+FCM_NOTIFICATION_ARCHITECTURE.md
