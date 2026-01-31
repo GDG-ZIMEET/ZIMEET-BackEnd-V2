@@ -52,8 +52,9 @@ public class ChatRoomCommandService {
     private static final String CHAT_ROOM_ACTIVITY_KEY = "chatroom:activity";
     private final HiCommandServiceImpl hiCommandService;
     private final TeamRepository teamRepository;
+    private final ChatNotificationService chatNotificationService;
 
-    //레디스 초기화 : 랜덤채팅 최신id 저장
+    // 레디스 초기화 : 랜덤채팅 최신id 저장
     @PostConstruct
     public void initRandomChatIdRedis() {
         try {
@@ -67,7 +68,6 @@ public class ChatRoomCommandService {
             // 테스트 환경 등에서 Redis가 없을 수 있으므로 무시
         }
     }
-
 
     // 채팅방 삭제
     @Transactional
@@ -117,18 +117,18 @@ public class ChatRoomCommandService {
         Map<String, Team> teams = hiCommandService.assignEntities(
                 teamRepository.findByIdIn(teamIds),
                 hiDto.getFromId(),
-                Team::getId
-        );
+                Team::getId);
 
         Team from = teams.get("from");
         Team to = teams.get("to");
 
         Hi hi = hiRepository.findByFromIdAndToIdAndHiStatus(from.getId(), to.getId(), HiStatus.NONE);
-        if (hi == null) throw new BusinessException(Code.HI_NOT_FOUND);
+        if (hi == null)
+            throw new BusinessException(Code.HI_NOT_FOUND);
         hi.setChangeStatus(HiStatus.ACCEPT);
         hiRepository.save(hi);
 
-        //채팅방 생성
+        // 채팅방 생성
         ChatRoom chatRoom = ChatRoom.builder()
                 .chatType(ChatType.TEAM)
                 .build();
@@ -151,17 +151,17 @@ public class ChatRoomCommandService {
         Map<String, User> users = hiCommandService.assignEntities(
                 userRepository.findByIdIn(userIds),
                 hiDto.getFromId(),
-                User::getId
-        );
+                User::getId);
         User from = users.get("from");
         User to = users.get("to");
 
         Hi hi = hiRepository.findByFromIdAndToIdAndHiStatus(from.getId(), to.getId(), HiStatus.NONE);
-        if (hi == null) throw new BusinessException(Code.HI_NOT_FOUND);
+        if (hi == null)
+            throw new BusinessException(Code.HI_NOT_FOUND);
         hi.setChangeStatus(HiStatus.ACCEPT);
         hiRepository.save(hi);
 
-        //채팅방 생성
+        // 채팅방 생성
         ChatRoom chatRoom = ChatRoom.builder()
                 .chatType(ChatType.USER)
                 .build();
@@ -186,14 +186,14 @@ public class ChatRoomCommandService {
     }
 
     // 랜덤 매칭 채팅방(4인용) 생성.
-    public ChatRoomDto.resultChatRoomDto addRandomUserJoinChat(List<Long> userIds){
-        if(userIds.size() != 4)
+    public ChatRoomDto.resultChatRoomDto addRandomUserJoinChat(List<Long> userIds) {
+        if (userIds.size() != 4)
             throw new BusinessException(Code.RANDOM_MEETING_USER_COUNT);
 
         // Redis에서 auto-increment된 randomChatId 가져오기
         Long newRandomChatId = getNewRandomChatId();
 
-        //채팅방 생성
+        // 채팅방 생성
         ChatRoom chatRoom = ChatRoom.builder()
                 .chatType(ChatType.RANDOM)
                 .randomChatId(newRandomChatId)
@@ -201,7 +201,7 @@ public class ChatRoomCommandService {
         chatRoom = chatRoomRepository.save(chatRoom);
 
         List<User> users = userRepository.findAllById(userIds);
-        if(users.size() < userIds.size())//저장 안된 경우 에러처리
+        if (users.size() < userIds.size())// 저장 안된 경우 에러처리
             throw new BusinessException(Code.RANDOM_MEETING_USER_COUNT);
         addUserToChatRoom(chatRoom, users);
 
@@ -212,7 +212,7 @@ public class ChatRoomCommandService {
 
     // 사용자들을 채팅방에 참여시키는 메서드
     @Transactional
-    public void addUserToChatRoom(ChatRoom chatRoom, List<User> users){
+    public void addUserToChatRoom(ChatRoom chatRoom, List<User> users) {
         Long chatRoomId = chatRoom.getId();
 
         // 새로운 사용자만 필터링하여 추가
@@ -222,7 +222,7 @@ public class ChatRoomCommandService {
 
             // Redis에 참여 여부가 있는지 먼저 체크
             String joinChatsKey = "user:" + userId + ":chatrooms";
-              // 새로운 User 정보 DB 저장 (배치 인서트로 한 번에 저장)
+            // 새로운 User 정보 DB 저장 (배치 인서트로 한 번에 저장)
             newJoinChats.add(JoinChat.builder()
                     .user(user)
                     .chatRoom(chatRoom)
@@ -236,6 +236,8 @@ public class ChatRoomCommandService {
             String chatRoomUsersKey = "chatroom:" + chatRoomId + ":users";
             redisTemplate.opsForSet().add(chatRoomUsersKey, String.valueOf(userId));
 
+            // 알림 발송 (RabbitMQ 적재)
+            chatNotificationService.notifyRoomOpen(user, chatRoomId);
         }
 
         // 한번에 저장
@@ -275,11 +277,10 @@ public class ChatRoomCommandService {
         ChatRoom chatRoom = chatRoomQueryService.getChatRoomById(chatRoomId);
 
         JoinChat joinChat = joinChatRepository.findByUserAndChatRoom(user, chatRoom)
-                .orElseThrow(() ->  new BusinessException(Code.JOINCHAT_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(Code.JOINCHAT_NOT_FOUND));
 
         joinChat.leaveChat();
         joinChatRepository.save(joinChat);
-
 
         String joinChatsKey = "user:" + userId + ":chatrooms";
         String chatRoomUsersKey = "chatroom:" + chatRoomId + ":users";
