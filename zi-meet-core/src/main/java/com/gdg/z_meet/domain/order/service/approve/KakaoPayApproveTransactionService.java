@@ -25,6 +25,7 @@ public class KakaoPayApproveTransactionService {
     private final KakaoPayDataRepository kakaoPayDataRepository;
     private final KakaoItemPurchaseRepository itemPurchaseRepository;
     private final KakaoItemProcessor kakaoItemProcessor;
+    private final com.gdg.z_meet.domain.fcm.service.payment.FcmPaymentMessageService fcmPaymentMessageService;
 
     /**
      * 결제 시도 (검증 및 상태 변경)
@@ -97,6 +98,9 @@ public class KakaoPayApproveTransactionService {
             log.error("상태 업데이트 실패 - orderId: {}", kakaoPayData.getOrderId(), e);
             throw new RuntimeException("STATUS_UPDATE", e);
         }
+
+        // 4. 결제 성공 알림 발송 (MQ 적재)
+        fcmPaymentMessageService.messagingPaymentSuccess(buyer.getId(), productType, totalPrice);
 
         return KaKaoPayApproveConverter.toResponse(kakaoApiResponse, parameter.getOrderId());
     }
