@@ -30,6 +30,11 @@ public class RabbitMqConfig {
     public static final String FCM_DLQ_QUEUE = "fcm.dlq.queue";
     public static final String FCM_DLQ_ROUTING_KEY = "fcm.dlq";
 
+    // Payment Approve (결제 승인 처리)
+    public static final String PAYMENT_EXCHANGE = "payment.exchange";
+    public static final String PAYMENT_APPROVE_QUEUE = "payment.approve.queue";
+    public static final String PAYMENT_APPROVE_ROUTING_KEY = "payment.approve.request";
+
     /**
      * 라우팅 키가 정확히 일치해야 Queue 로 전달, 서버 재시작해도 큐 유지, 사용자 빠져나가도 큐 유지
      */
@@ -91,6 +96,31 @@ public class RabbitMqConfig {
     }
 
     /**
+     * Payment Approve Exchange
+     */
+    @Bean
+    public DirectExchange paymentExchange() {
+        return new DirectExchange(PAYMENT_EXCHANGE, true, false);
+    }
+
+    /**
+     * Payment Approve Queue
+     */
+    @Bean
+    public Queue paymentApproveQueue() {
+        return QueueBuilder.durable(PAYMENT_APPROVE_QUEUE)
+                .withArgument("x-dead-letter-exchange", FCM_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", FCM_DLQ_ROUTING_KEY)
+                .withArgument("x-message-ttl", 1800000) // 30분 TTL (결제 세션 고려)
+                .build();
+    }
+
+    @Bean
+    public Binding paymentApproveBinding() {
+        return BindingBuilder.bind(paymentApproveQueue()).to(paymentExchange()).with(PAYMENT_APPROVE_ROUTING_KEY);
+    }
+
+    /**
      * JSON 메시지 변환기
      */
     @Bean
@@ -103,7 +133,8 @@ public class RabbitMqConfig {
     @Bean
     public org.springframework.amqp.support.converter.DefaultClassMapper classMapper() {
         org.springframework.amqp.support.converter.DefaultClassMapper classMapper = new org.springframework.amqp.support.converter.DefaultClassMapper();
-        classMapper.setTrustedPackages("java.util", "java.lang", "com.gdg.z_meet.domain.fcm.dto");
+        classMapper.setTrustedPackages("java.util", "java.lang", "com.gdg.z_meet.domain.fcm.dto",
+                "com.gdg.z_meet.domain.order.dto");
         return classMapper;
     }
 
