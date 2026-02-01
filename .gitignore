@@ -69,3 +69,6 @@ ngrinder/
 .ngrinder/
 *-agent/
 *-controller/
+
+zi-meet-core/bin/*
+*/bin/*
