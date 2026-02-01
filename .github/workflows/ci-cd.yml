@@ -48,10 +48,15 @@ jobs:
 #        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 #        run: ./gradlew clean jacocoTestReport --stacktrace
 
-      - name: Create application.yml
+      - name: Create application.yml for API
         run: |
-          mkdir -p ./src/main/resources
-          echo "${{ secrets.APPLICATION }}" > ./src/main/resources/application-prod.yml
+          mkdir -p ./zi-meet-api/src/main/resources
+          echo "${{ secrets.APPLICATION }}" > ./zi-meet-api/src/main/resources/application-prod.yml
+
+      - name: Create application.yml for Worker
+        run: |
+          mkdir -p ./zi-meet-worker/src/main/resources
+          echo "${{ secrets.APPLICATION }}" > ./zi-meet-worker/src/main/resources/application-prod.yml
 
       - name: Build with Gradle
         run: ./gradlew clean bootJar -x test
@@ -77,16 +82,33 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push API image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
+          build-args: |
+            MODULE_NAME=zi-meet-api
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/zimeet-api:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/zimeet-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Worker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          build-args: |
+            MODULE_NAME=zi-meet-worker
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/zimeet-worker:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/zimeet-worker:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -110,18 +132,22 @@ jobs:
             git fetch origin
             git reset --hard origin/main
             
+            docker-compose -f docker-compose.infra.yml down
             docker-compose -f docker-compose.worker-mq.yml down
             
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/zimeet-api:latest
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/zimeet-worker:latest
             
             # compose 파일의 이미지 경로 수정
-            sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest|g" docker-compose.prod.yml
-            sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet:latest|g" docker-compose.worker-mq.yml
+            sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet-api:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet-api:latest|g" docker-compose.prod.yml
+            sed -i "s|image: \${DOCKERHUB_USERNAME}/zimeet-worker:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/zimeet-worker:latest|g" docker-compose.worker-mq.yml
             
-            docker-compose -f docker-compose.prod.yml up -d redis mongodb nginx
+            docker-compose -f docker-compose.infra.yml up -d
             docker-compose -f docker-compose.worker-mq.yml up -d
             docker-compose -f docker-compose.monitoring.yml up -d 
             
+            # Nginx start (api compose에 포함됨)
+            docker-compose -f docker-compose.prod.yml up -d nginx
             chmod +x ./blue-green-deploy.sh
             ./blue-green-deploy.sh
                         

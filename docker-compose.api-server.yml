@@ -1,38 +1,7 @@
 services:
-  redis:
-    container_name: redis1
-    image: redis:latest
-    ports:
-      - "6379:6379"
-    networks:
-      - zimeet_network
-    volumes:
-      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
-    command: redis-server /usr/local/etc/redis/redis.conf
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb1
-    ports:
-      - "27018:27017"
-    networks:
-      - zimeet_network
-    volumes:
-      - mongodb_data:/data/db
-    healthcheck:
-      test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-
   backend-blue:
     container_name: backend-blue
-    image: ${DOCKERHUB_USERNAME}/zimeet:latest
+    image: ${DOCKERHUB_USERNAME}/zimeet-api:latest
     stop_grace_period: 60s # Graceful shutdown 대기 시간
     stop_signal: SIGTERM # Graceful shutdown 신호
     env_file:
@@ -58,7 +27,7 @@ services:
 
   backend-green:
     container_name: backend-green
-    image: ${DOCKERHUB_USERNAME}/zimeet:latest
+    image: ${DOCKERHUB_USERNAME}/zimeet-api:latest
     stop_grace_period: 60s # Graceful shutdown 대기 시간
     stop_signal: SIGTERM # Graceful shutdown 신호
     env_file:
@@ -109,6 +78,3 @@ services:
 networks:
   zimeet_network:
     external: true
-
-volumes:
-  mongodb_data:

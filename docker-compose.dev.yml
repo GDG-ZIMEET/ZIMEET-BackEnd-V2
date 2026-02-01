@@ -1,7 +1,7 @@
 # [사용법]
 # 컨테이너 재시작
-# docker-compose -f docker-compose.dev.yml -f docker-compose.worker-mq.yml down
-# docker-compose -f docker-compose.dev.yml -f docker-compose.worker-mq.yml up -d --build
+# docker-compose -f docker-compose.dev.yml -f docker-compose.worker-server.yml down
+# docker-compose -f docker-compose.dev.yml -f docker-compose.worker-server.yml up -d --build
 services:
   mysql:
     image: mysql:8.0
@@ -16,7 +16,7 @@ services:
     networks:
       - gdg_network
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,7 +41,10 @@ services:
   # API WAS (개발환경 단일)
   backend-api:
     container_name: backend
-    build: .
+    build:
+      context: .
+      args:
+        - MODULE_NAME=zi-meet-api
     environment:
       - SPRING_PROFILES_ACTIVE=dev,local
       - SERVER_PORT=8080
@@ -72,7 +75,10 @@ services:
   # Worker WAS (개발환경)
   backend-worker-dev:
     container_name: backend-worker
-    build: .
+    build:
+      context: .
+      args:
+        - MODULE_NAME=zi-meet-worker
     environment:
       - SPRING_PROFILES_ACTIVE=worker,dev
       - SERVER_PORT=8080

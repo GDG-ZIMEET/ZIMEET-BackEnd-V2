@@ -1,11 +1,13 @@
 FROM eclipse-temurin:17-jdk
 
-# Docker 이미지 빌드 과정에서 외부에서 값을 전달 받아 설정하기 위함
-ARG JAR_FILE=build/libs/*.jar
+# 빌드 인자 정의 (api 또는 worker)
+ARG MODULE_NAME=zi-meet-api
+ARG JAR_FILE=${MODULE_NAME}/build/libs/*.jar
 
-# JAR 파일 메인 디렉토리에 복사
+# JAR 파일 복사
 COPY ${JAR_FILE} app.jar
 
+# 타임존 설정
 RUN ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime && echo "Asia/Seoul" > /etc/timezone
 
 ENV SPRING_PROFILES_ACTIVE=prod

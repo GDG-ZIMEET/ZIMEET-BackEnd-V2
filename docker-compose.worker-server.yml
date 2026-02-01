@@ -1,28 +1,7 @@
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"      # AMQP port
-      - "15672:15672"   # Management UI
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
-      RABBITMQ_DEFAULT_VHOST: /
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - zimeet_network
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
   backend-worker-1:
     container_name: backend-worker-1
-    image: ${DOCKERHUB_USERNAME}/zimeet:latest
+    image: ${DOCKERHUB_USERNAME}/zimeet-worker:latest
     env_file:
       - .env
     environment:
@@ -47,7 +26,7 @@ services:
 
   backend-worker-2:
     container_name: backend-worker-2
-    image: ${DOCKERHUB_USERNAME}/zimeet:latest
+    image: ${DOCKERHUB_USERNAME}/zimeet-worker:latest
     env_file:
       - .env
     environment:
@@ -73,6 +52,3 @@ services:
 networks:
   zimeet_network:
     external: true
-
-volumes:
-  rabbitmq_data:
