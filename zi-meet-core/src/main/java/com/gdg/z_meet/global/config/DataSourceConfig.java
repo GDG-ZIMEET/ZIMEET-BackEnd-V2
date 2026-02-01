@@ -22,7 +22,7 @@ public class DataSourceConfig {
         HikariDataSource ds = DataSourceBuilder.create()
                 .type(HikariDataSource.class)
                 .build();
-        ds.setMaximumPoolSize(5); // 비즈니스 풀 5개 강제 설정
+        ds.setMaximumPoolSize(30);
         return ds;
     }
 
@@ -32,7 +32,7 @@ public class DataSourceConfig {
         HikariDataSource ds = DataSourceBuilder.create()
                 .type(HikariDataSource.class)
                 .build();
-        ds.setMaximumPoolSize(100); // 락 풀 100개 강제 설정
+        ds.setMaximumPoolSize(10);
         return ds;
     }
 

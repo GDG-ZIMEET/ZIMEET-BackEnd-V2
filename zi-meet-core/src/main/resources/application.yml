@@ -12,17 +12,16 @@ spring:
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 80
+      maximum-pool-size: 30
       pool-name: HikariCP-Business
 
-  # 네임드 락 전용 DataSource 설정
   datasource-lock:
     jdbc-url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DEFAULT_SCHEMA:zimeet}?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 20
+      maximum-pool-size: 10
       pool-name: HikariCP-Lock
   jpa:
     hibernate:
