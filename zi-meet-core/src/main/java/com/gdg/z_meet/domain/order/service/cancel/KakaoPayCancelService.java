@@ -60,7 +60,7 @@ public class KakaoPayCancelService {
      * @param kakaoPayData 결제 데이터
      * @param cancelReason 취소 사유
      */
-    public void compensatePayment(KakaoPayData kakaoPayData, String cancelReason) {
+    public String compensatePayment(KakaoPayData kakaoPayData, String cancelReason) {
         try {
             log.warn("보상 트랜잭션 시작 - orderId: {}, reason: {}", kakaoPayData.getOrderId(), cancelReason);
 
@@ -69,13 +69,12 @@ public class KakaoPayCancelService {
                     kakaoPayData.getStatus() == PaymentStatus.FAILED) {
                 log.info("이미 취소/실패 처리된 결제입니다 - orderId: {}, status: {}",
                         kakaoPayData.getOrderId(), kakaoPayData.getStatus());
-                return;
+                return "SUCCESS";
             }
 
             // UNKNOWN 상태인 경우 재시도 처리
             if (kakaoPayData.getStatus() == PaymentStatus.UNKNOWN) {
                 log.info("UNKNOWN 상태 결제 재처리 시도 - orderId: {}", kakaoPayData.getOrderId());
-                // 상태를 PROCESSING으로 변경하여 재시도 (Tx)
                 transactionService.updateStatus(kakaoPayData.getId(), PaymentStatus.PROCESSING);
             }
 
@@ -84,58 +83,65 @@ public class KakaoPayCancelService {
                 log.warn("TID가 없어 취소할 수 없습니다. 상태만 FAILED로 변경 - orderId: {}",
                         kakaoPayData.getOrderId());
                 transactionService.markAsFailed(kakaoPayData.getId());
-                return;
+                return "FATAL"; // TID 누락은 재시도해도 해결되지 않음
             }
 
             // 취소 파라미터 생성
             KaKaoPayCancelDTO.Parameter cancelParameter = KaKaoPayCancelConverter.toParameter(
                     kakaoPayData, cancelReason);
 
-            // 카카오페이 취소 API 호출 (No Tx)
-            kaKaoPayApiClient.requestPaymentCancel(cancelParameter)
-                    .ifPresentOrElse(
-                            response -> {
-                                log.info("카카오페이 취소 성공 - orderId: {}", kakaoPayData.getOrderId());
-                                transactionService.completeCancel(kakaoPayData.getId());
-                            },
-                            () -> {
-                                // 취소 API 호출 실패 (타임아웃 포함)
-                                log.warn("카카오페이 취소 API 호출 실패 - orderId: {}, tid: {}. 취소 상태 조회 시도",
-                                        kakaoPayData.getOrderId(), kakaoPayData.getTid());
+            // 카카오페이 취소 API 호출
+            // 4xx 에러 발생 시 BusinessException이 던져짐 (catch 블록에서 처리)
+            // 타임아웃/5xx 시 Optional.empty() 반환 혹은 예외 발생
+            Optional<KaKaoPayCancelDTO.KakaoApiResponse> responseOpt = kaKaoPayApiClient
+                    .requestPaymentCancel(cancelParameter);
 
-                                // 타임아웃 가능성이 있으므로 취소 상태 조회 시도
-                                Optional<KaKaoPayApproveDTO.KaKaoApiResponse> inquiryResult = kaKaoPayApiClient
-                                        .inquirePaymentStatus(kakaoPayData.getTid());
+            if (responseOpt.isPresent()) {
+                log.info("카카오페이 취소 성공 - orderId: {}", kakaoPayData.getOrderId());
+                transactionService.completeCancel(kakaoPayData.getId());
+                return "SUCCESS";
+            } else {
+                // API 호출 실패 (타임아웃 등 retryable)
+                // 상태 조회 시도
+                log.warn("카카오페이 취소 API 응답 없음 (타임아웃 등) - 상태 조회 시도");
+                Optional<KaKaoPayApproveDTO.KaKaoApiResponse> inquiryResult = kaKaoPayApiClient
+                        .inquirePaymentStatus(kakaoPayData.getTid());
 
-                                if (inquiryResult.isPresent()) {
-                                    // 조회 성공 - 실제 취소 상태 확인 필요
-                                    // 카카오페이 응답에서 취소 여부를 확인할 수 있다면 처리
-                                    // 현재는 조회만 하고 UNKNOWN 상태로 저장 (추후 수동 확인 필요)
-                                    log.warn("취소 상태 조회 성공했으나 취소 여부 불명확 - orderId: {}, tid: {}. UNKNOWN 상태로 저장",
-                                            kakaoPayData.getOrderId(), kakaoPayData.getTid());
-                                    transactionService.updateStatus(kakaoPayData.getId(), PaymentStatus.UNKNOWN);
-                                } else {
-                                    // 조회도 실패 - 완전히 알 수 없는 상태
-                                    log.error("취소 API 호출 및 상태 조회 모두 실패 - orderId: {}, tid: {}. UNKNOWN 상태로 저장",
-                                            kakaoPayData.getOrderId(), kakaoPayData.getTid());
-                                    transactionService.updateStatus(kakaoPayData.getId(), PaymentStatus.UNKNOWN);
-                                }
-                            });
+                if (inquiryResult.isPresent()) {
+                    String status = inquiryResult.get().getStatus();
+                    if ("CANCEL_PAYMENT".equals(status)) {
+                        log.info("조회 결과 이미 취소됨 확인 - orderId: {}", kakaoPayData.getOrderId());
+                        transactionService.completeCancel(kakaoPayData.getId());
+                        return "SUCCESS";
+                    }
+                    // 여전히 결제 완료/대기 상태라면 취소 실패로 간주 -> 재시도 필요
+                }
 
-            log.info("보상 트랜잭션 완료 - orderId: {}", kakaoPayData.getOrderId());
+                // 타임아웃이나 알 수 없는 오류는 재시도
+                return "RETRY";
+            }
+
+        } catch (BusinessException e) {
+            // 4xx 에러 등 결정적 실패는 재시도 하지 않음
+            log.error("보상 트랜잭션 치명적 실패 (재시도 불가) - orderId: {}, error: {}",
+                    kakaoPayData.getOrderId(), e.getMessage());
+            // 필요한 경우 여기서 FAILED 상태로 업데이트
+            try {
+                transactionService.updateStatus(kakaoPayData.getId(), PaymentStatus.UNKNOWN); // 혹은 FAILED
+            } catch (Exception ex) {
+                /* ignore */ }
+            return "FATAL";
 
         } catch (Exception e) {
-            log.error("보상 트랜잭션 처리 중 예외 발생 - orderId: {}, error: {}",
+            log.error("보상 트랜잭션 처리 중 예외 발생 (재시도 예정) - orderId: {}, error: {}",
                     kakaoPayData.getOrderId(), e.getMessage(), e);
 
-            // 예외 발생 시 UNKNOWN 상태로 저장 (재시도 안내 필요)
             try {
                 transactionService.updateStatus(kakaoPayData.getId(), PaymentStatus.UNKNOWN);
-                log.warn("보상 트랜잭션 예외 발생으로 UNKNOWN 상태 저장 - orderId: {}",
-                        kakaoPayData.getOrderId());
             } catch (Exception ex) {
                 log.error("상태 업데이트 실패 - orderId: {}", kakaoPayData.getOrderId(), ex);
             }
+            return "RETRY";
         }
     }
 }

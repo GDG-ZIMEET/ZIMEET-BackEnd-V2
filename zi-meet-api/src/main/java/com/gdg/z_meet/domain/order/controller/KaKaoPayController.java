@@ -30,13 +30,14 @@ public class KaKaoPayController {
     private final KakaoPayApproveService kaKaoPayApproveService;
     private final KakaoPayCancelService kaKaoPayCancelService;
 
+    private final com.gdg.z_meet.domain.order.service.sync.PaymentSyncService paymentSyncService;
+
     @Operation(summary = "결제 준비 API", description = "주문 정보를 받아 사용자가 결제 화면으로 이동하는 '결제 준비'의 단계입니다.")
     @PostMapping("/ready")
     public Response<KaKaoPayReadyDTO.Response> ready(
             @AuthUser Long userId,
             @Valid @RequestBody KaKaoPayReadyDTO.Request request,
-            @Parameter(description = "멱등성 키", example = "550e8400-e29b-41d4-a716-446655440000")
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+            @Parameter(description = "멱등성 키", example = "550e8400-e29b-41d4-a716-446655440000") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
 
         KaKaoPayReadyDTO.Parameter parameter = KaKaoPayReadyConverter.toParameter(userId, request);
         KaKaoPayReadyDTO.Response response = kaKaoPayReadyService.ready(parameter, idempotencyKey);
@@ -48,8 +49,7 @@ public class KaKaoPayController {
     public Response<KaKaoPayApproveDTO.Response> approve(
             @AuthUser Long userId,
             @Valid @RequestBody KaKaoPayApproveDTO.Request request,
-            @Parameter(description = "멱등성 키", example = "550e8400-e29b-41d4-a716-446655440000")
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+            @Parameter(description = "멱등성 키", example = "550e8400-e29b-41d4-a716-446655440000") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
 
         KaKaoPayApproveDTO.Parameter parameter = KaKaoPayApproveConverter.toParameter(userId, request);
         KaKaoPayApproveDTO.Response response = kaKaoPayApproveService.approve(parameter, idempotencyKey);
@@ -61,11 +61,26 @@ public class KaKaoPayController {
     public Response<KaKaoPayCancelDTO.Response> cancel(
             @AuthUser Long userId,
             @Valid @RequestBody KaKaoPayCancelDTO.Request request,
-            @Parameter(description = "멱등성 키", example = "550e8400-e29b-41d4-a716-446655440000")
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+            @Parameter(description = "멱등성 키", example = "550e8400-e29b-41d4-a716-446655440000") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
 
         KaKaoPayCancelDTO.Parameter parameter = KaKaoPayCancelConverter.toParameter(userId, request);
         KaKaoPayCancelDTO.Response response = kaKaoPayCancelService.cancel(parameter, userId);
         return Response.ok(response);
+    }
+
+    @Operation(summary = "결제 결과 Webhook (통지)", description = "카카오페이 서버에서 결제 결과를 전송하는 웹훅 엔드포인트입니다.")
+    @PostMapping("/callback")
+    public String callback(@RequestBody com.gdg.z_meet.domain.order.dto.KakaoPayWebhookDTO webhookData) {
+        log.info("카카오페이 Webhook 수신 - orderId: {}, status: {}",
+                webhookData.getPartner_order_id(), webhookData.getStatus());
+
+        try {
+            paymentSyncService.syncPaymentStatus(webhookData.getPartner_order_id());
+        } catch (Exception e) {
+            log.error("Webhook 처리 중 에러 발생 - orderId: {}", webhookData.getPartner_order_id(), e);
+        }
+
+        // 카카오페이 가이드에 따라 성공 응답 반환 (보통 빈 문자열 혹은 OK)
+        return "OK";
     }
 }
