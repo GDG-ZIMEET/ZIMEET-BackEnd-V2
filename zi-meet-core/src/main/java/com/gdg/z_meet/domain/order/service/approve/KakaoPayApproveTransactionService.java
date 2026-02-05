@@ -4,6 +4,7 @@ import com.gdg.z_meet.domain.order.converter.KaKaoPayApproveConverter;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayApproveDTO;
 import com.gdg.z_meet.domain.order.entity.ItemPurchase;
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
+import com.gdg.z_meet.domain.order.entity.enums.OutboxStatus;
 import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
 import com.gdg.z_meet.domain.order.entity.enums.ProductType;
 import com.gdg.z_meet.domain.order.repository.KakaoItemPurchaseRepository;
@@ -26,6 +27,7 @@ public class KakaoPayApproveTransactionService {
     private final KakaoItemPurchaseRepository itemPurchaseRepository;
     private final KakaoItemProcessor kakaoItemProcessor;
     private final com.gdg.z_meet.domain.fcm.service.payment.FcmPaymentMessageService fcmPaymentMessageService;
+    private final com.gdg.z_meet.domain.order.service.notification.PaymentNotificationService paymentNotificationService;
 
     /**
      * 결제 시도 (검증 및 상태 변경)
@@ -46,8 +48,12 @@ public class KakaoPayApproveTransactionService {
             throw new BusinessException(Code.KAKAO_API_INVALID_BUYER);
         }
 
-        // 상태 변경 (PREPARED -> PROCESSING)
-        kakaoPayData.setStatus(PaymentStatus.PROCESSING);
+        // 상태 변경 (PREPARED -> PROCESSING) 및 아웃박스 등록
+        if (kakaoPayData.getStatus() == PaymentStatus.PREPARED) {
+            kakaoPayData.setStatus(PaymentStatus.PROCESSING);
+            kakaoPayData.setPgToken(parameter.getPgToken());
+            kakaoPayData.setOutboxStatus(OutboxStatus.INIT);
+        }
 
         // 변경 감지로 저장되지만 명시적으로 호출
         return kakaoPayDataRepository.save(kakaoPayData);
@@ -102,6 +108,14 @@ public class KakaoPayApproveTransactionService {
         // 4. 결제 성공 알림 발송 (MQ 적재)
         fcmPaymentMessageService.messagingPaymentSuccess(buyer.getId(), productType, totalPrice);
 
+        // 5. 실시간 결제 상태 알림 (WebSocket/FCM - 향후 구현)
+        try {
+            paymentNotificationService.notifyApproved(buyer.getId(), kakaoPayData.getOrderId());
+        } catch (Exception e) {
+            log.warn("결제 상태 알림 전송 실패 - orderId: {}", kakaoPayData.getOrderId(), e);
+            // 알림 실패는 결제 프로세스에 영향을 주지 않음
+        }
+
         return KaKaoPayApproveConverter.toResponse(kakaoApiResponse, parameter.getOrderId());
     }
 
@@ -111,5 +125,16 @@ public class KakaoPayApproveTransactionService {
     @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
     public java.util.Optional<KakaoPayData> findKakaoPayData(String orderId) {
         return kakaoPayDataRepository.findByOrderId(orderId);
+    }
+
+    /**
+     * 결제 상태 업데이트 (독립적 트랜잭션)
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateStatus(Long id, PaymentStatus status) {
+        kakaoPayDataRepository.findById(id).ifPresent(data -> {
+            data.setStatus(status);
+            kakaoPayDataRepository.save(data);
+        });
     }
 }
