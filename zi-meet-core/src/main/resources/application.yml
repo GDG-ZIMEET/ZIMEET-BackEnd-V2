@@ -66,7 +66,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,metrics,prometheus,circuitbreakers,retries
       base-path: /actuator
   endpoint:
     health:
@@ -109,3 +109,42 @@ logging:
   level:
     org.springframework.web.servlet.PageNotFound: ERROR
     org.springframework.web.socket.config.WebSocketMessageBrokerStats: ERROR
+
+# Resilience4j 설정
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+    instances:
+      kakaoPayApi:
+        baseConfig: default
+        slidingWindowSize: 20
+        failureRateThreshold: 60
+        waitDurationInOpenState: 60s
+
+  retry:
+    configs:
+      default:
+        maxAttempts: 2
+        waitDuration: 500ms
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - java.net.SocketTimeoutException
+    instances:
+      kakaoPayApi:
+        baseConfig: default
+        maxAttempts: 2
+        waitDuration: 1000ms
+
+  ratelimiter:
+    instances:
+      kakaoPayApi:
+        limitForPeriod: 50
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0s
