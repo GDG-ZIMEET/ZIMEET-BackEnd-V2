@@ -87,26 +87,22 @@ public class KakaoPayApproveService {
 
     /**
      * 결제 결과를 알 수 없는 경우 (타임아웃 등) 처리
-     * 즉시 동기화 시도 후, 여전히 실패 시 UNKNOWN 상태로 전환 및 보상 트랜잭션 예약
+     * 즉시 UNKNOWN 상태로 전환하고 보상 트랜잭션(스케줄러)으로 위임 (Fail-fast)
      */
     private void handleUnknownPayment(String orderId, String tid) {
-        try {
-            // 1. 즉시 상태 동기화 시도 (이미 승인되었을 가능성 확인)
-            boolean synced = paymentSyncService.syncPaymentStatus(orderId);
-            if (synced) {
-                log.info("알 수 없는 상태에서 즉시 동기화 성공 - orderId: {}", orderId);
-                return;
-            }
+        log.warn("결제 알 수 없는 상태(타임아웃 등) 발생 -> 즉시 UNKNOWN 전환 후 스케줄러 위임 - orderId: {}", orderId);
 
-            // 2. 여전히 알 수 없는 경우 UNKNOWN 상태로 변경
+        try {
+            // 1. 즉시 UNKNOWN 상태로 변경 (사용자 대기 시간 최소화)
             var kakaoPayDataOpt = transactionService.findKakaoPayData(orderId);
             kakaoPayDataOpt.ifPresent(data -> {
                 transactionService.updateStatus(data.getId(), PaymentStatus.UNKNOWN);
-                log.warn("결제 상태를 UNKNOWN으로 변경 완료 (추후 스케줄러에서 재시도) - orderId: {}", orderId);
+                log.info("결제 상태 UNKNOWN 변경 완료 - orderId: {}", orderId);
             });
 
-            // 3. 보상 트랜잭션 예약 (망 취소 관점: 안정성을 위해 예약)
+            // 2. 보상 트랜잭션 예약 (스케줄러에서 사후 처리)
             paymentRecoveryService.scheduleRecovery(orderId, tid, "TIMEOUT_UNKNOWN");
+
         } catch (Exception e) {
             log.error("UNKNOWN 처리 중 오류 발생 - orderId: {}", orderId, e);
         }
