@@ -70,5 +70,5 @@ ngrinder/
 *-agent/
 *-controller/
 
-zi-meet-core/bin/*
+zi-meet-application/bin/*
 */bin/*

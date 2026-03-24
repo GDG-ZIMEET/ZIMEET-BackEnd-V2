@@ -1,5 +1,5 @@
 dependencies {
-    implementation project(':zi-meet-core')
+    implementation project(':zi-meet-application')
 }
 
 bootJar {
