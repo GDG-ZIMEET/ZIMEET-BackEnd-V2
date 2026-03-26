@@ -55,6 +55,9 @@ public class KaKaoPayApiClient {
     @Value("${kakao.pay.fail-url}")
     private String failUrl;
 
+    @Value("${test.payment.delay-ms:0}")
+    private long paymentDelayMs;
+
     // 카카오 페이 결제 준비 API
     public Optional<KaKaoPayReadyDTO.KakaoApiResponse> requestPaymentReady(
             KaKaoPayReadyDTO.Parameter parameter, String orderId, User buyer) {
@@ -99,6 +102,16 @@ public class KaKaoPayApiClient {
     @io.github.resilience4j.retry.annotation.Retry(name = "kakaoPayApi")
     public Optional<KaKaoPayApproveDTO.KaKaoApiResponse> requestPaymentApprove(
             KaKaoPayApproveDTO.Parameter parameter, KakaoPayData kakaoPayData) {
+
+        // [부하 테스트용] 인위적 지연 발생
+        if (paymentDelayMs > 0) {
+            try {
+                log.info("[Stress Test] Injecting artificial delay: {}ms", paymentDelayMs);
+                Thread.sleep(paymentDelayMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
 
         try {
             log.info("카카오페이 승인 요청 호출 - orderId: {}, tid: {}", parameter.getOrderId(), kakaoPayData.getTid());

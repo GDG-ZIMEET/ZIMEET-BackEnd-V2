@@ -7,11 +7,13 @@ import com.gdg.z_meet.global.config.RabbitMqConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
+@Profile("!local")
 @RequiredArgsConstructor
 public class PaymentOutboxService {
 

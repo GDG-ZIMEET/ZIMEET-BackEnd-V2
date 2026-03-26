@@ -42,19 +42,29 @@ public class KakaoPayLockService {
     private static final String LOCK_PREFIX = "LOCK_KAKAO_PAY_APPROVE_";
     private static final String GET_LOCK_QUERY = "SELECT GET_LOCK(?, ?)";
     private static final String RELEASE_LOCK_QUERY = "SELECT RELEASE_LOCK(?)";
-    private static final int LOCK_TIMEOUT_SECONDS = 3;
+    private static final int DEFAULT_LOCK_TIMEOUT_SECONDS = 3;
 
     /**
-     * 네임드 락을 획득하고 비즈니스 로직을 수행한 뒤 락을 해제함
+     * 네임드 락을 획득하고 비즈니스 로직을 수행한 뒤 락을 해제함 (기본 타임아웃 3초)
      */
     public <T> T executeWithLock(String orderId, Supplier<T> businessLogic) {
+        return executeWithLock(orderId, DEFAULT_LOCK_TIMEOUT_SECONDS, businessLogic);
+    }
+
+    /**
+     * 네임드 락을 획득하고 비즈니스 로직을 수행한 뒤 락을 해제함 (타임아웃 동적 설정)
+     */
+    public <T> T executeWithLock(String orderId, int timeoutSeconds, Supplier<T> businessLogic) {
         String lockName = LOCK_PREFIX + orderId;
         String ownerId = UUID.randomUUID().toString();
         Instant start = Instant.now();
 
         try (Connection conn = dataSource.getConnection()) {
+            // 락 전용 커넥션 최적화: 트랜잭션 오버헤드 감소 및 의도 명시
+            conn.setReadOnly(true);
+            conn.setAutoCommit(true);
 
-            if (!acquireLock(conn, lockName, ownerId, start)) {
+            if (!acquireLock(conn, lockName, timeoutSeconds, ownerId, start)) {
                 throw new BusinessException(Code.IDEMPOTENCY_CONFLICT);
             }
 
@@ -71,24 +81,32 @@ public class KakaoPayLockService {
         }
     }
 
-    private boolean acquireLock(Connection conn, String lockName, String ownerId, Instant start) {
-        try (PreparedStatement pstmt = conn.prepareStatement(GET_LOCK_QUERY)) {
-            pstmt.setString(1, lockName);
-            pstmt.setInt(2, LOCK_TIMEOUT_SECONDS);
+    private boolean acquireLock(Connection conn, String lockName, int timeoutSeconds, String ownerId, Instant start) {
+        try {
+            // H2 등 로컬 DB인 경우 네임드 락 시뮬레이션 (커넥션은 여전히 점유됨)
+            if (conn.getMetaData().getDatabaseProductName().equalsIgnoreCase("H2")) {
+                log.debug("[Local/H2] 네임드락 획득 시뮬레이션 성공 - lockName: {}", lockName);
+                return true;
+            }
 
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    int result = rs.getInt(1);
-                    int waitMs = (int) Duration.between(start, Instant.now()).toMillis();
+            try (PreparedStatement pstmt = conn.prepareStatement(GET_LOCK_QUERY)) {
+                pstmt.setString(1, lockName);
+                pstmt.setInt(2, timeoutSeconds);
 
-                    if (result == 1) {
-                        kakaoPaylockMonitoringService.acquired(lockName, ownerId, Instant.now(), waitMs);
-                        log.debug("네임드락 획득 성공 - lockName: {}, ownerId: {}", lockName, ownerId);
-                        return true;
-                    } else {
-                        kakaoPaylockMonitoringService.timeout(lockName, ownerId, waitMs);
-                        log.warn("네임드락 획득 실패 (타임아웃) - lockName: {}", lockName);
-                        return false;
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        int result = rs.getInt(1);
+                        int waitMs = (int) Duration.between(start, Instant.now()).toMillis();
+
+                        if (result == 1) {
+                            kakaoPaylockMonitoringService.acquired(lockName, ownerId, Instant.now(), waitMs);
+                            log.debug("네임드락 획득 성공 - lockName: {}, ownerId: {}", lockName, ownerId);
+                            return true;
+                        } else {
+                            kakaoPaylockMonitoringService.timeout(lockName, ownerId, waitMs);
+                            log.warn("네임드락 획득 실패 (타임아웃) - lockName: {}, timeout: {}s", lockName, timeoutSeconds);
+                            return false;
+                        }
                     }
                 }
             }
@@ -100,21 +118,28 @@ public class KakaoPayLockService {
     }
 
     private void releaseLock(Connection conn, String lockName, String ownerId, Instant acquiredAt) {
-        try (PreparedStatement pstmt = conn.prepareStatement(RELEASE_LOCK_QUERY)) {
-            pstmt.setString(1, lockName);
+        try {
+            // H2 등 로컬 DB인 경우 성공 응답
+            if (conn.getMetaData().getDatabaseProductName().equalsIgnoreCase("H2")) {
+                log.debug("[Local/H2] 네임드락 해제 시뮬레이션 성공 - lockName: {}", lockName);
+                return;
+            }
 
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    int result = rs.getInt(1);
-                    int holdMs = (int) Duration.between(acquiredAt, Instant.now()).toMillis();
+            try (PreparedStatement pstmt = conn.prepareStatement(RELEASE_LOCK_QUERY)) {
+                pstmt.setString(1, lockName);
 
-                    if (result == 1) {
-                        kakaoPaylockMonitoringService.released(lockName, ownerId, Instant.now(), holdMs);
-                        log.debug("네임드락 해제 성공 - lockName: {}", lockName);
-                    } else {
-                        // 락이 존재하지 않거나 내 소유가 아님
-                        kakaoPaylockMonitoringService.failed(lockName, ownerId, "RELEASE_FAILED_NOT_OWNER");
-                        log.warn("네임드락 해제 실패 (소유자 불일치 등) - lockName: {}", lockName);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        int result = rs.getInt(1);
+                        int holdMs = (int) Duration.between(acquiredAt, Instant.now()).toMillis();
+
+                        if (result == 1) {
+                            kakaoPaylockMonitoringService.released(lockName, ownerId, Instant.now(), holdMs);
+                            log.debug("네임드락 해제 성공 - lockName: {}", lockName);
+                        } else {
+                            kakaoPaylockMonitoringService.failed(lockName, ownerId, "RELEASE_FAILED_NOT_OWNER");
+                            log.warn("네임드락 해제 실패 (소유자 불일치 등) - lockName: {}", lockName);
+                        }
                     }
                 }
             }

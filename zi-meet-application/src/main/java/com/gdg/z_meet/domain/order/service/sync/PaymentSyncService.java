@@ -6,11 +6,13 @@ import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
 import com.gdg.z_meet.domain.order.repository.KakaoPayDataRepository;
 import com.gdg.z_meet.domain.order.service.approve.KakaoPayApproveTransactionService;
+import com.gdg.z_meet.domain.order.service.cancel.KakaoPayCancelService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Slf4j
@@ -21,6 +23,7 @@ public class PaymentSyncService {
     private final KaKaoPayApiClient kaKaoPayApiClient;
     private final KakaoPayDataRepository kakaoPayDataRepository;
     private final KakaoPayApproveTransactionService approveTransactionService;
+    private final KakaoPayCancelService kakaoPayCancelService;
 
     /**
      * 외부 PG사와 상태를 동기화하여 결제 상태를 확정함
@@ -68,16 +71,29 @@ public class PaymentSyncService {
                     approveTransactionService.completePayment(kakaoPayData.getId(), response, null);
                     return true;
 
+                case "READY":
+                    // 5분 이상 READY 상태라면 결제가 중단된 것으로 간주 -> 강제 취소 및 정리
+                    log.warn("READY 상태 낙오 데이터 발견. 강제 정리 시작 - orderId: {}", orderId);
+                    kakaoPayCancelService.compensatePayment(kakaoPayData, "GHOST_READY_PAYMENT_CLEANUP");
+                    return true;
+
                 case "CANCEL_PAYMENT":
+                case "PART_CANCEL_PAYMENT":
                 case "FAIL_PAYMENT":
-                    log.info("결제 취소/실패 확인됨. 상태 업데이트 - orderId: {}", orderId);
+                    log.info("결제 취소/실패 확인됨. 상태 업데이트 - orderId: {}, pgStatus: {}", orderId, pgStatus);
                     kakaoPayData.setStatus(
-                            pgStatus.equals("CANCEL_PAYMENT") ? PaymentStatus.CANCELLED : PaymentStatus.FAILED);
+                            pgStatus.contains("CANCEL") ? PaymentStatus.CANCELLED : PaymentStatus.FAILED);
                     kakaoPayDataRepository.save(kakaoPayData);
                     return true;
 
                 default:
                     log.warn("알 수 없는 PG 상태 - orderId: {}, pgStatus: {}", orderId, pgStatus);
+                    // 30분 이상 경과한 데이터는 최종 실패로 처리 (Alarm 대용)
+                    if (kakaoPayData.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(30))) {
+                        log.error("[ALARM] 30분이 지난 UNKNOWN 결제 발견. 최종 실패 처리 - orderId: {}", orderId);
+                        kakaoPayData.setStatus(PaymentStatus.FAILED);
+                        kakaoPayDataRepository.save(kakaoPayData);
+                    }
                     return false;
             }
         }

@@ -12,7 +12,7 @@ spring:
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 30
+      maximum-pool-size: 100
       pool-name: HikariCP-Business
 
   datasource-lock:
@@ -21,7 +21,7 @@ spring:
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 10
+      maximum-pool-size: 20
       pool-name: HikariCP-Lock
   jpa:
     hibernate:

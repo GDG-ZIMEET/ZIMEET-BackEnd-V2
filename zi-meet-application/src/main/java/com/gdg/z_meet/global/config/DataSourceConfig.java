@@ -3,6 +3,7 @@ package com.gdg.z_meet.global.config;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
@@ -15,6 +16,12 @@ import javax.sql.DataSource;
 @Configuration
 public class DataSourceConfig {
 
+    @Value("${spring.datasource.hikari.maximum-pool-size:100}")
+    private int mainPoolSize;
+
+    @Value("${spring.datasource-lock.hikari.maximum-pool-size:20}")
+    private int lockPoolSize;
+
     @Primary
     @Bean
     @ConfigurationProperties(prefix = "spring.datasource")
@@ -22,7 +29,8 @@ public class DataSourceConfig {
         HikariDataSource ds = DataSourceBuilder.create()
                 .type(HikariDataSource.class)
                 .build();
-        ds.setMaximumPoolSize(30);
+        ds.setMaximumPoolSize(mainPoolSize);
+        ds.setPoolName("HikariCP-Business");
         return ds;
     }
 
@@ -32,7 +40,8 @@ public class DataSourceConfig {
         HikariDataSource ds = DataSourceBuilder.create()
                 .type(HikariDataSource.class)
                 .build();
-        ds.setMaximumPoolSize(10);
+        ds.setMaximumPoolSize(lockPoolSize);
+        ds.setPoolName("HikariCP-Lock");
         return ds;
     }
 

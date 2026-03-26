@@ -116,7 +116,7 @@ public class KakaoPayApproveTransactionService {
             // 알림 실패는 결제 프로세스에 영향을 주지 않음
         }
 
-        return KaKaoPayApproveConverter.toResponse(kakaoApiResponse, parameter.getOrderId());
+        return KaKaoPayApproveConverter.toResponse(kakaoApiResponse, kakaoPayData.getOrderId());
     }
 
     /**
