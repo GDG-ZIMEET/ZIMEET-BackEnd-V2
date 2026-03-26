@@ -16,7 +16,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
+import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -122,7 +124,13 @@ public class KaKaoPayApiClient {
                     .body(getApproveParams(parameter, kakaoPayData))
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (req, res) -> {
-                        log.error("카카오페이 승인 API 에러 응답 - Status: {}", res.getStatusCode());
+                        String body = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                        log.error("카카오페이 승인 API 에러 응답 - Status: {}, Body: {}", res.getStatusCode(), body);
+
+                        // 이미 승인된 결제인 경우 (카카오 에러 코드 -708 또는 메시지 포함 시)
+                        if (body.contains("ALREADY_APPROVED") || body.contains("-708")) {
+                            throw new KakaoPayAlreadyApprovedException();
+                        }
                         throw new BusinessException(Code.INVALID_KAKAO_API_RESPONSE);
                     })
                     .body(KaKaoPayApproveDTO.KaKaoApiResponse.class);
@@ -130,6 +138,9 @@ public class KaKaoPayApiClient {
             log.info("카카오페이 승인 응답 수신 - orderId: {}", parameter.getOrderId());
             return Optional.ofNullable(response);
 
+        } catch (KakaoPayAlreadyApprovedException e) {
+            log.info("이미 승인된 결제 확인(재시도) -> 상태 조회 시도 - orderId: {}", parameter.getOrderId());
+            return inquirePaymentStatus(kakaoPayData.getTid());
         } catch (ResourceAccessException e) {
             if (e.getCause() instanceof SocketTimeoutException) {
                 log.warn("카카오페이 결제 승인 API 타임아웃 발생 -> 상태 조회 시도 - orderId: {}", parameter.getOrderId());
@@ -151,6 +162,12 @@ public class KaKaoPayApiClient {
             log.error("카카오페이 결제 승인 중 예상치 못한 오류 - orderId: {}, error: {}", parameter.getOrderId(), e.getMessage());
             throw e; // 서킷 브레이커 실패 카운트 증가
         }
+    }
+
+    /**
+     * 이미 승인된 결제임을 나타내는 내부 예외
+     */
+    private static class KakaoPayAlreadyApprovedException extends RuntimeException {
     }
 
     private Optional<KaKaoPayApproveDTO.KaKaoApiResponse> approveApiFallback(
