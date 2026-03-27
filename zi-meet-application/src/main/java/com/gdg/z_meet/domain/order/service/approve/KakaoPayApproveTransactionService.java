@@ -25,7 +25,8 @@ public class KakaoPayApproveTransactionService {
 
     private final KakaoPayDataRepository kakaoPayDataRepository;
     private final KakaoItemPurchaseRepository itemPurchaseRepository;
-    private final KakaoItemProcessor kakaoItemProcessor;
+    /** Facade 인터페이스에 의존 - Order 도메인은 User/Meeting Repository를 직접 알지 못함 */
+    private final ItemGrantService itemGrantService;
     private final com.gdg.z_meet.domain.fcm.service.payment.FcmPaymentMessageService fcmPaymentMessageService;
     private final com.gdg.z_meet.domain.order.service.notification.PaymentNotificationService paymentNotificationService;
 
@@ -75,10 +76,15 @@ public class KakaoPayApproveTransactionService {
         Long totalPrice = kakaoPayData.getTotalPrice();
         User buyer = kakaoPayData.getBuyer();
 
-        // 1. 상품 지급 처리
-        KakaoItemProcessor.ProcessResult processResult;
+        // 1. 상품 지급 처리 (Facade를 통해 도메인 경계 유지)
+        ItemGrantResult grantResult;
         try {
-            processResult = kakaoItemProcessor.processProduct(productType, totalPrice, buyer);
+            grantResult = itemGrantService.grant(productType, totalPrice, buyer);
+        } catch (BusinessException e) {
+            // 아이템 지급 실패(팀/프로필 미존재) → 카카오페이 환불 스케줄러가 처리
+            log.error("상품 지급 실패(BusinessException) - orderId: {}, cause: {}",
+                    kakaoPayData.getOrderId(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("상품 지급 실패 - orderId: {}", kakaoPayData.getOrderId(), e);
             throw new RuntimeException("PRODUCT_PROCESSING", e);
@@ -88,7 +94,7 @@ public class KakaoPayApproveTransactionService {
         try {
             ItemPurchase itemPurchase = KaKaoPayApproveConverter.toItemPurchase(
                     kakaoApiResponse, kakaoPayData, buyer,
-                    processResult.team(), processResult.userProfile());
+                    grantResult.team(), grantResult.userProfile());
             itemPurchaseRepository.save(itemPurchase);
             kakaoPayData.setItemPurchase(itemPurchase);
         } catch (Exception e) {

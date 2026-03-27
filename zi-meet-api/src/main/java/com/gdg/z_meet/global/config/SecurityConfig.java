@@ -21,7 +21,7 @@ public class SecurityConfig {
         @Bean
         public WebSecurityCustomizer webSecurityCustomizer() {
                 return (web) -> web.ignoring()
-                                .requestMatchers("/signup", "login");
+                                .requestMatchers("/signup", "login", "/actuator/**", "/api/test/**");
         }
 
         @Bean
@@ -46,6 +46,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/ws", "/ws/**", "/ws/info/**").permitAll() // WebSocket
                                                                                                              // 엔드포인트 허용
                                                 .requestMatchers("/api/test/**").permitAll() // 테스트 API 허용
+                                                .requestMatchers("/actuator/**").permitAll() // 모니터링 메트릭
                                                 .requestMatchers("/error").permitAll()
                                                 .anyRequest().authenticated() // 나머지 요청은 인증 필요
                                 )

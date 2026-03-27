@@ -5,6 +5,7 @@ import com.gdg.z_meet.global.config.RabbitMqConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -13,6 +14,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * 트랜잭션 커밋 이후에 실제로 RabbitMQ로 메시지를 전송하는 리스너
  */
 @Component
+@Profile("!local")
 @RequiredArgsConstructor
 @Slf4j
 public class FcmMessageEventListener {

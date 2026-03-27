@@ -192,6 +192,51 @@ public class MockPaymentController {
         });
     }
 
+    @Operation(summary = "동적 테스트 시뮬레이터", description = "헤더(X-Simulated-Error-Rate, X-Simulated-Delay)를 통해 에러와 지연을 제어합니다.")
+    @PostMapping("/simulate")
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "kakaoPayApi", fallbackMethod = "simulateFallback")
+    public Response<Map<String, Object>> simulate(
+            @RequestBody Map<String, Object> request,
+            @RequestHeader(value = "X-Simulated-Error-Rate", defaultValue = "0") int errorRate,
+            @RequestHeader(value = "X-Simulated-Delay", defaultValue = "0") int delayMs) {
+
+        long requestId = requestCounter.incrementAndGet();
+
+        try {
+            // 1. 지연 시간 시뮬레이션
+            if (delayMs > 0) {
+                Thread.sleep(delayMs);
+            }
+
+            // 2. 에러율 시뮬레이션 (0~100)
+            int randomValue = (int) (Math.random() * 100);
+            if (randomValue < errorRate) {
+                log.warn("[Simulate] 강제 에러 발생 - RequestId: {}, Rate: {}%", requestId, errorRate);
+                throw new RuntimeException("Simulated External Service Error");
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("requestId", requestId);
+            response.put("status", "SUCCESS");
+            response.put("message", "Simulated success");
+
+            return Response.ok(response);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted", e);
+        }
+    }
+
+    private Response<Map<String, Object>> simulateFallback(
+            Map<String, Object> request, int errorRate, int delayMs, Exception e) {
+        log.error("[Simulate Fallback] 서킷 브레이커 작동 - RequestId: {}, Error: {}", request.get("orderId"), e.getMessage());
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "FALLBACK");
+        response.put("message", "Circuit breaker fallback response");
+        return Response.ok(response);
+    }
+
     /**
      * 요청 카운터 조회 (모니터링용)
      */

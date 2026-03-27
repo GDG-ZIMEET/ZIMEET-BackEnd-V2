@@ -82,4 +82,15 @@ public class PaymentPoolTestController {
             return Response.ok(response);
         });
     }
+
+    @Operation(summary = "[Control] 일반 조회 API 시뮬레이션", description = "단순 DB 트랜잭션을 실행하여 가용성을 확인합니다.")
+    @GetMapping("/query")
+    public Response<Map<String, Object>> testQuery() {
+        String orderId = "QUERY_" + System.currentTimeMillis();
+        testService.executeShortTransaction("QUERY", orderId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "OK");
+        return Response.ok(response);
+    }
 }

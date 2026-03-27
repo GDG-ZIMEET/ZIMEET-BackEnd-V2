@@ -4,7 +4,7 @@ datasources:
   - name: Loki
     type: loki
     access: proxy
-    url: http://loki:3100
+    url: http://zimeet-loki:3100
     uid: loki
     isDefault: false
     editable: true

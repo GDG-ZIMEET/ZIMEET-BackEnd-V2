@@ -1,42 +1,43 @@
 services:
-  prometheus:
+  zimeet-prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
+    container_name: zimeet-prometheus
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-storage:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-remote-write-receiver'
     ports:
-      - "9090:9090"
+      - "9092:9090"
     networks:
       - zimeet_network
     restart: always
 
-  grafana:
+  zimeet-grafana:
     image: grafana/grafana:latest
-    container_name: grafana
+    container_name: zimeet-grafana
     volumes:
       - grafana-storage:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PW}
     ports:
-      - "3000:3000"
+      - "3002:3000"
     networks:
       - zimeet_network
     restart: always
     depends_on:
-      - prometheus
+      - zimeet-prometheus
 
-
-  loki:
+  zimeet-loki:
     image: grafana/loki:2.9.2
-    container_name: loki
+    container_name: zimeet-loki
     ports:
-      - "3100:3100"
+      - "3102:3100"
     volumes:
       - ./loki:/loki
     command: -config.file=/etc/loki/local-config.yaml
@@ -44,9 +45,9 @@ services:
       - zimeet_network
     restart: always
 
-  promtail:
+  zimeet-promtail:
     image: grafana/promtail:latest
-    container_name: promtail
+    container_name: zimeet-promtail
     volumes:
       - ./monitoring/promtail:/etc/promtail
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
@@ -56,11 +57,11 @@ services:
       - zimeet_network
     restart: always
     depends_on:
-      - loki
+      - zimeet-loki
 
-  mysql-exporter:
+  zimeet-mysql-exporter:
     image: prom/mysqld-exporter:v0.14.0
-    container_name: mysql-exporter
+    container_name: zimeet-mysql-exporter
     env_file:
       - .env
     environment:
@@ -71,42 +72,42 @@ services:
       - '--collect.perf_schema.eventswaits'
       - '--collect.info_schema.processlist'
     ports:
-      - "9104:9104"
+      - "9105:9104"
     networks:
       - zimeet_network
     restart: always
 
-  nginx-exporter:
+  zimeet-nginx-exporter:
     image: nginx/nginx-prometheus-exporter:latest
-    container_name: nginx-exporter
+    container_name: zimeet-nginx-exporter
     command:
       - '--nginx.scrape-uri=http://nginx:80/stub_status'
     ports:
-      - "9113:9113"
+      - "9114:9113"
     networks:
       - zimeet_network
     restart: always
 
-  rabbitmq-exporter:
+  zimeet-rabbitmq-exporter:
     image: kbudde/rabbitmq-exporter:latest
-    container_name: rabbitmq-exporter
+    container_name: zimeet-rabbitmq-exporter
     environment:
       - RABBIT_URL=http://rabbitmq:15672
       - RABBIT_USER=zimeet
       - RABBIT_PASSWORD=1234
     ports:
-      - "9419:9419"
+      - "9420:9419"
     networks:
       - zimeet_network
     restart: always
 
-  redis-exporter:
+  zimeet-redis-exporter:
     image: oliver006/redis_exporter:latest
-    container_name: redis-exporter
+    container_name: zimeet-redis-exporter
     environment:
       - REDIS_ADDR=redis1:6379
     ports:
-      - "9121:9121"
+      - "9122:9121"
     networks:
       - zimeet_network
     restart: always

@@ -100,7 +100,7 @@ kakao:
     cancel-url: ${KAKAO_PAY_CANCEL_URL:http://localhost:3000/purchase/cancel}
     fail-url: ${KAKAO_PAY_FAIL_URL:http://localhost:3000/purchase/fail}
     connection-timeout: 5000  # Connection Timeout: 5초
-    read-timeout: 10000       # Read Timeout: 10초
+    read-timeout: 9000        # Read Timeout: 9초
 
 firebase:
   admin-sdk: ${FIREBASE_ADMIN_SDK_PATH}
@@ -129,7 +129,7 @@ resilience4j:
         slidingWindowSize: 20
         minimumNumberOfCalls: 5
         failureRateThreshold: 50
-        slowCallDurationThreshold: 2s
+        slowCallDurationThreshold: 6s
         slowCallRateThreshold: 50
         waitDurationInOpenState: 30s
         permittedNumberOfCallsInHalfOpenState: 3

@@ -12,8 +12,10 @@ import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 @Configuration
+@Profile("!local")
 public class RabbitMqConfig {
 
     public static final String FCM_EXCHANGE = "fcm.exchange"; // 메시지 컨슈머 라우터
