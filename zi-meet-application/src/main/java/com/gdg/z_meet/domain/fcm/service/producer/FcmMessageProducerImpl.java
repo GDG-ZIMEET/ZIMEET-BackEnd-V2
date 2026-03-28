@@ -2,7 +2,6 @@ package com.gdg.z_meet.domain.fcm.service.producer;
 
 import com.gdg.z_meet.domain.fcm.dto.FcmMessageRequest;
 import com.gdg.z_meet.domain.fcm.event.FcmMessageEvent;
-import com.gdg.z_meet.global.config.RabbitMqConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -14,7 +13,7 @@ import java.util.UUID;
 
 /**
  * Message Publish Producer 로,
- * 직접 전송 대신 내부 이벤트를 발행하여 트랜잭션 커밋 이후 전송되도록 처리한다.
+ * 직접 전송 대신 내부 이벤트를 발행하여 트랜잭션 커밋 이후 Redis Stream으로 전송되도록 처리한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -34,9 +33,7 @@ public class FcmMessageProducerImpl implements FcmMessageProducer {
                                 .createdAt(LocalDateTime.now())
                                 .build();
 
-                eventPublisher.publishEvent(new FcmMessageEvent(
-                                RabbitMqConfig.FCM_BROADCAST_ROUTING_KEY,
-                                message));
+                eventPublisher.publishEvent(new FcmMessageEvent(message));
 
                 log.info("브로드캐스트 FCM 메시지 이벤트를 발행했습니다. messageId: {}, title: {}",
                                 message.getMessageId(), title);
@@ -53,9 +50,7 @@ public class FcmMessageProducerImpl implements FcmMessageProducer {
                                 .createdAt(LocalDateTime.now())
                                 .build();
 
-                eventPublisher.publishEvent(new FcmMessageEvent(
-                                RabbitMqConfig.FCM_SINGLE_ROUTING_KEY,
-                                message));
+                eventPublisher.publishEvent(new FcmMessageEvent(message));
 
                 log.info("단일 FCM 메시지 이벤트를 발행했습니다. messageId: {}, userId: {}",
                                 message.getMessageId(), userId);
@@ -79,9 +74,7 @@ public class FcmMessageProducerImpl implements FcmMessageProducer {
                                 .createdAt(LocalDateTime.now())
                                 .build();
 
-                eventPublisher.publishEvent(new FcmMessageEvent(
-                                RabbitMqConfig.FCM_SINGLE_ROUTING_KEY,
-                                message));
+                eventPublisher.publishEvent(new FcmMessageEvent(message));
 
                 log.info("테스트 FCM 메시지 이벤트를 발행했습니다. messageId: {}, userId: {}",
                                 message.getMessageId(), userId);

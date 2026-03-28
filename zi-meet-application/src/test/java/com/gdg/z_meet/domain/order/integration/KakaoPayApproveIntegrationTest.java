@@ -23,8 +23,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -81,11 +79,6 @@ class KakaoPayApproveIntegrationTest {
         @MockBean
         private RedisTemplate<String, Object> redisTemplate;
 
-        // External dependencies mocks
-        @MockBean
-        private ConnectionFactory connectionFactory;
-        @MockBean
-        private RabbitTemplate rabbitTemplate;
         @MockBean
         private MongoTemplate mongoTemplate;
         @MockBean

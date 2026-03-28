@@ -27,8 +27,6 @@ public class KakaoPayApproveTransactionService {
     private final KakaoItemPurchaseRepository itemPurchaseRepository;
     /** Facade 인터페이스에 의존 - Order 도메인은 User/Meeting Repository를 직접 알지 못함 */
     private final ItemGrantService itemGrantService;
-    private final com.gdg.z_meet.domain.fcm.service.payment.FcmPaymentMessageService fcmPaymentMessageService;
-    private final com.gdg.z_meet.domain.order.service.notification.PaymentNotificationService paymentNotificationService;
 
     /**
      * 결제 시도 (검증 및 상태 변경)
@@ -111,16 +109,6 @@ public class KakaoPayApproveTransactionService {
             throw new RuntimeException("STATUS_UPDATE", e);
         }
 
-        // 4. 결제 성공 알림 발송 (MQ 적재)
-        fcmPaymentMessageService.messagingPaymentSuccess(buyer.getId(), productType, totalPrice);
-
-        // 5. 실시간 결제 상태 알림 (WebSocket/FCM - 향후 구현)
-        try {
-            paymentNotificationService.notifyApproved(buyer.getId(), kakaoPayData.getOrderId());
-        } catch (Exception e) {
-            log.warn("결제 상태 알림 전송 실패 - orderId: {}", kakaoPayData.getOrderId(), e);
-            // 알림 실패는 결제 프로세스에 영향을 주지 않음
-        }
 
         return KaKaoPayApproveConverter.toResponse(kakaoApiResponse, kakaoPayData.getOrderId());
     }

@@ -4,7 +4,6 @@ import com.gdg.z_meet.domain.fcm.dto.FcmMessageRequest;
 import com.gdg.z_meet.domain.fcm.entity.FcmToken;
 import com.gdg.z_meet.domain.fcm.repository.FcmTokenRepository;
 import com.gdg.z_meet.domain.user.entity.User;
-import com.gdg.z_meet.global.config.RabbitMqConfig;
 import com.google.firebase.messaging.BatchResponse;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -14,8 +13,6 @@ import com.google.firebase.messaging.Notification;
 import com.google.firebase.messaging.SendResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.AmqpRejectAndDontRequeueException;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -50,30 +47,10 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
             "messaging/registration-token-not-registered");
 
     /**
-     * FCM 전용 큐에 바인딩
-     * 
-     * @RabbitListener(queues = RabbitMqConfig.FCM_QUEUE) : Spring 이 알아서 메시지를 꺼냄 →
-     *                        JSON 역직렬화 → fcmMessage 객체로 바인딩 → 메서드 실행
+     * FCM 메시지 실제 처리 로직
      */
-    /**
-     * Broadcast Queue Listener
-     */
-    @RabbitListener(queues = RabbitMqConfig.FCM_BROADCAST_QUEUE)
-    @Transactional
-    public void consumeBroadcastMessage(FcmMessageRequest fcmMessage) {
-        processFcmMessage(fcmMessage);
-    }
-
-    /**
-     * Single Queue Listener
-     */
-    @RabbitListener(queues = RabbitMqConfig.FCM_SINGLE_QUEUE)
-    @Transactional
-    public void consumeSingleMessage(FcmMessageRequest fcmMessage) {
-        processFcmMessage(fcmMessage);
-    }
-
     @Override
+    @Transactional
     public void processFcmMessage(FcmMessageRequest fcmMessage) {
         log.info("FCM 메시지 처리 시작: messageId={}, type={}",
                 fcmMessage.getMessageId(), fcmMessage.getType());
@@ -93,8 +70,7 @@ public class FcmMessageConsumerImpl implements FcmMessageConsumer {
         } catch (Exception e) {
             log.error("FCM 메시지 처리 실패: messageId={}, error={}",
                     fcmMessage.getMessageId(), e.getMessage(), e);
-            throw new AmqpRejectAndDontRequeueException("FCM 메시지 처리 실패로 재큐 방지: messageId=" + fcmMessage.getMessageId(),
-                    e);
+            throw new RuntimeException("FCM 메시지 처리 실패: " + fcmMessage.getMessageId(), e);
         }
     }
 

@@ -46,20 +46,6 @@ spring:
     caffeine:
       spec: maximumSize=500,expireAfterAccess=3600s
 
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: 5672
-    username: ${RABBITMQ_USERNAME:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
-    virtual-host: /
-    listener:
-      simple:
-        retry:
-          enabled: true
-          initial-interval: 2000
-          max-attempts: 3
-        acknowledge-mode: auto
-
 management:
   server:
     port: 8080

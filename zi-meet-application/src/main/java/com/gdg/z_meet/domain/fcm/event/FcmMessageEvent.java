@@ -10,6 +10,5 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public class FcmMessageEvent {
-    private final String routingKey;
     private final FcmMessageRequest message;
 }

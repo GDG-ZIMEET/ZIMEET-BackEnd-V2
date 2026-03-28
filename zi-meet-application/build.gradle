@@ -36,9 +36,6 @@ dependencies {
 	api 'com.google.firebase:firebase-admin:9.2.0'
 	api 'com.fasterxml.jackson.core:jackson-core:2.16.1'
 
-	// RabbitMQ
-	api 'org.springframework.boot:spring-boot-starter-amqp'
-
 	// Resilience4j (Circuit Breaker, Retry, Rate Limiter)
 	api 'io.github.resilience4j:resilience4j-spring-boot3:2.1.0'
 	api 'org.springframework.boot:spring-boot-starter-aop'

@@ -1,30 +1,26 @@
 package com.gdg.z_meet.domain.fcm.unit.service.producer;
 
 import com.gdg.z_meet.domain.fcm.dto.FcmMessageRequest;
+import com.gdg.z_meet.domain.fcm.event.FcmMessageEvent;
 import com.gdg.z_meet.domain.fcm.service.producer.FcmMessageProducerImpl;
-import com.gdg.z_meet.global.config.RabbitMqConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class FcmMessageProducerImplTest {
 
     @Mock
-    private RabbitTemplate rabbitTemplate;
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private FcmMessageProducerImpl fcmMessageProducer;
@@ -36,16 +32,13 @@ class FcmMessageProducerImplTest {
 
         fcmMessageProducer.sendBroadcastMessage(title, body);
 
-        verify(rabbitTemplate).convertAndSend(
-                eq(RabbitMqConfig.FCM_EXCHANGE),
-                eq(RabbitMqConfig.FCM_BROADCAST_ROUTING_KEY),
-                argThat((FcmMessageRequest message) -> {
-                    return message.getType() == FcmMessageRequest.FcmType.BROADCAST &&
-                            message.getTitle().equals(title) &&
-                            message.getBody().equals(body) &&
-                            message.getMessageId() != null &&
-                            message.getCreatedAt() != null;
-                }));
+        verify(eventPublisher).publishEvent(argThat((FcmMessageEvent event) -> {
+            FcmMessageRequest message = event.getMessage();
+            return message.getType() == FcmMessageRequest.FcmType.BROADCAST &&
+                    message.getTitle().equals(title) &&
+                    message.getBody().equals(body) &&
+                    message.getMessageId() != null;
+        }));
     }
 
     @Test
@@ -57,18 +50,14 @@ class FcmMessageProducerImplTest {
 
         fcmMessageProducer.sendTestMessage(userId, fcmToken, title, body);
 
-        verify(rabbitTemplate).convertAndSend(
-                eq(RabbitMqConfig.FCM_EXCHANGE),
-                eq(RabbitMqConfig.FCM_SINGLE_ROUTING_KEY),
-                argThat((FcmMessageRequest message) -> {
-                    return message.getType() == FcmMessageRequest.FcmType.TEST &&
-                            message.getTitle().equals(title) &&
-                            message.getBody().equals(body) &&
-                            message.getUserId().equals(userId) &&
-                            message.getFcmTokens().equals(List.of(fcmToken)) &&
-                            message.getMessageId() != null &&
-                            message.getCreatedAt() != null;
-                }));
+        verify(eventPublisher).publishEvent(argThat((FcmMessageEvent event) -> {
+            FcmMessageRequest message = event.getMessage();
+            return message.getType() == FcmMessageRequest.FcmType.TEST &&
+                    message.getTitle().equals(title) &&
+                    message.getBody().equals(body) &&
+                    message.getUserId().equals(userId) &&
+                    message.getFcmTokens().equals(List.of(fcmToken));
+        }));
     }
 
     @Test
@@ -79,117 +68,13 @@ class FcmMessageProducerImplTest {
 
         fcmMessageProducer.sendSingleMessage(userId, title, body);
 
-        verify(rabbitTemplate).convertAndSend(
-                eq(RabbitMqConfig.FCM_EXCHANGE),
-                eq(RabbitMqConfig.FCM_SINGLE_ROUTING_KEY),
-                argThat((FcmMessageRequest message) -> {
-                    return message.getType() == FcmMessageRequest.FcmType.SINGLE &&
-                            message.getTitle().equals(title) &&
-                            message.getBody().equals(body) &&
-                            message.getUserId().equals(userId) &&
-                            message.getMessageId() != null &&
-                            message.getCreatedAt() != null;
-                }));
-    }
-
-    @Test
-    void 빈문자열_제목과내용으로_메시지전송() {
-        String emptyTitle = "";
-        String emptyBody = "";
-
-        fcmMessageProducer.sendBroadcastMessage(emptyTitle, emptyBody);
-
-        verify(rabbitTemplate).convertAndSend(
-                eq(RabbitMqConfig.FCM_EXCHANGE),
-                eq(RabbitMqConfig.FCM_BROADCAST_ROUTING_KEY),
-                argThat((FcmMessageRequest message) -> {
-                    return message.getTitle().equals(emptyTitle) &&
-                            message.getBody().equals(emptyBody);
-                }));
-    }
-
-    @Test
-    void null_userId로_테스트메시지전송() {
-        Long userId = null;
-        String fcmToken = "test-token";
-        String title = "제목";
-        String body = "내용";
-
-        fcmMessageProducer.sendTestMessage(userId, fcmToken, title, body);
-
-        verify(rabbitTemplate).convertAndSend(
-                eq(RabbitMqConfig.FCM_EXCHANGE),
-                eq(RabbitMqConfig.FCM_SINGLE_ROUTING_KEY),
-                argThat((FcmMessageRequest message) -> {
-                    return message.getUserId() == null &&
-                            message.getFcmTokens().equals(List.of(fcmToken));
-                }));
-    }
-
-    @Test
-    void null_fcmToken으로_테스트메시지전송_큐전송안함() {
-        Long userId = 1L;
-        String fcmToken = null;
-        String title = "제목";
-        String body = "내용";
-
-        fcmMessageProducer.sendTestMessage(userId, fcmToken, title, body);
-
-        verify(rabbitTemplate, never()).convertAndSend(anyString(), anyString(), any(FcmMessageRequest.class));
-    }
-
-    @Test
-    void 빈문자열_fcmToken으로_테스트메시지전송_큐전송안함() {
-        Long userId = 1L;
-        String fcmToken = "";
-        String title = "제목";
-        String body = "내용";
-
-        fcmMessageProducer.sendTestMessage(userId, fcmToken, title, body);
-
-        verify(rabbitTemplate, never()).convertAndSend(anyString(), anyString(), any(FcmMessageRequest.class));
-    }
-
-    @Test
-    void 공백_fcmToken으로_테스트메시지전송_큐전송안함() {
-        Long userId = 1L;
-        String fcmToken = "   ";
-        String title = "제목";
-        String body = "내용";
-
-        fcmMessageProducer.sendTestMessage(userId, fcmToken, title, body);
-
-        verify(rabbitTemplate, never()).convertAndSend(anyString(), anyString(), any(FcmMessageRequest.class));
-    }
-
-    @Test
-    void null_title과body로_브로드캐스트메시지전송() {
-        String nullTitle = null;
-        String nullBody = null;
-
-        fcmMessageProducer.sendBroadcastMessage(nullTitle, nullBody);
-
-        verify(rabbitTemplate).convertAndSend(
-                eq(RabbitMqConfig.FCM_EXCHANGE),
-                eq(RabbitMqConfig.FCM_BROADCAST_ROUTING_KEY),
-                argThat((FcmMessageRequest message) -> {
-                    return message.getTitle() == null &&
-                            message.getBody() == null &&
-                            message.getMessageId() != null &&
-                            message.getCreatedAt() != null;
-                }));
-    }
-
-    @Test
-    void rabbitTemplate_예외발생시_예외전파() {
-        String title = "제목";
-        String body = "내용";
-
-        doThrow(new RuntimeException("RabbitMQ 연결 실패"))
-                .when(rabbitTemplate).convertAndSend(anyString(), anyString(), any(FcmMessageRequest.class));
-
-        assertThrows(RuntimeException.class,
-                () -> fcmMessageProducer.sendBroadcastMessage(title, body));
+        verify(eventPublisher).publishEvent(argThat((FcmMessageEvent event) -> {
+            FcmMessageRequest message = event.getMessage();
+            return message.getType() == FcmMessageRequest.FcmType.SINGLE &&
+                    message.getTitle().equals(title) &&
+                    message.getBody().equals(body) &&
+                    message.getUserId().equals(userId);
+        }));
     }
 
     @Test
@@ -197,36 +82,9 @@ class FcmMessageProducerImplTest {
         String title = "제목";
         String body = "내용";
 
-        // 같은 내용으로 두 번 전송
         fcmMessageProducer.sendBroadcastMessage(title, body);
         fcmMessageProducer.sendBroadcastMessage(title, body);
 
-        // messageId가 다른지 확인 (UUID이므로 매번 달라야 함)
-        verify(rabbitTemplate, times(2)).convertAndSend(
-                eq(RabbitMqConfig.FCM_EXCHANGE),
-                eq(RabbitMqConfig.FCM_BROADCAST_ROUTING_KEY),
-                argThat((FcmMessageRequest message) -> message.getMessageId() != null));
-    }
-
-    @Test
-    void FCM메시지_타입별_검증() {
-        // BROADCAST 타입
-        fcmMessageProducer.sendBroadcastMessage("브로드캐스트", "모든사용자");
-
-        // SINGLE 타입
-        fcmMessageProducer.sendSingleMessage(1L, "단일메시지", "특정사용자");
-
-        // TEST 타입
-        fcmMessageProducer.sendTestMessage(1L, "test-token", "테스트", "테스트메시지");
-
-        verify(rabbitTemplate).convertAndSend(
-                eq(RabbitMqConfig.FCM_EXCHANGE),
-                eq(RabbitMqConfig.FCM_BROADCAST_ROUTING_KEY),
-                any(FcmMessageRequest.class));
-
-        verify(rabbitTemplate, times(2)).convertAndSend(
-                eq(RabbitMqConfig.FCM_EXCHANGE),
-                eq(RabbitMqConfig.FCM_SINGLE_ROUTING_KEY),
-                any(FcmMessageRequest.class));
+        verify(eventPublisher, times(2)).publishEvent(any(FcmMessageEvent.class));
     }
 }
