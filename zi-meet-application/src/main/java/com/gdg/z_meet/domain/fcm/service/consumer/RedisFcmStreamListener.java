@@ -21,7 +21,6 @@ import java.net.UnknownHostException;
 
 @Slf4j
 @Component
-@Profile("worker")
 @RequiredArgsConstructor
 public class RedisFcmStreamListener implements StreamListener<String, ObjectRecord<String, FcmMessageRequest>> {
 

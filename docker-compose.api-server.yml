@@ -1,18 +1,31 @@
 services:
   backend-blue:
     container_name: backend-blue
-    image: ${DOCKERHUB_USERNAME}/zimeet-api:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     stop_grace_period: 60s # Graceful shutdown 대기 시간
     stop_signal: SIGTERM # Graceful shutdown 신호
     env_file:
       - .env
     expose:
       - "8080"
+    ports:
+      - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_PROFILES_ACTIVE=local
+      - JAVA_TOOL_OPTIONS=-Xmx512m -Xms512m
+      - DB_HOST=host.docker.internal
+      - DB_PORT=3307
+      - DB_USERNAME=root
+      - DB_PASSWORD=
+      - MONGODB_HOST=host.docker.internal
+      - REDIS_HOST=host.docker.internal
       - MYSQL_USER=${PROD_DB_USERNAME}
       - MYSQL_PASSWORD=${PROD_DB_PASSWORD}
-      - MYSQL_URL=jdbc:mysql://${PROD_DB_ENDPOINT}:3306/${PROD_DB_NAME}?serverTimezone=UTC&sslMode=PREFERRED&allowPublicKeyRetrieval=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    mem_limit: 768m
     networks:
       - zimeet_network
     dns:
@@ -27,7 +40,7 @@ services:
 
   backend-green:
     container_name: backend-green
-    image: ${DOCKERHUB_USERNAME}/zimeet-api:latest
+    build: ./zi-meet-api
     stop_grace_period: 60s # Graceful shutdown 대기 시간
     stop_signal: SIGTERM # Graceful shutdown 신호
     env_file:

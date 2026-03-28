@@ -14,7 +14,6 @@ import java.time.Duration;
 
 @Slf4j
 @Component
-@Profile("worker")
 @RequiredArgsConstructor
 public class RedisStreamRecoveryScheduler {
 

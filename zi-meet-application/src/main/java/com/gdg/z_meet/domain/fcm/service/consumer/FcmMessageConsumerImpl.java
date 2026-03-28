@@ -30,7 +30,6 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Profile("worker")
 public class FcmMessageConsumerImpl implements FcmMessageConsumer {
 
     private final FcmTokenRepository fcmTokenRepository;

@@ -32,11 +32,9 @@ spring:
       enabled: true
       path: /h2-console
 
-  # Redis / MongoDB / RabbitMQ / WebSocket 자동 설정 제외 (로컬 테스트용)
+  # MongoDB / RabbitMQ / 자동 설정 제외 (로컬 테스트용)
   autoconfigure:
     exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
       - org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration
       - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
       - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
@@ -69,7 +67,7 @@ firebase:
 
 management:
   server:
-    port: 8082
+    port: 8080
   endpoints:
     web:
       exposure:

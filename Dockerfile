@@ -1,7 +1,7 @@
 FROM eclipse-temurin:17-jdk
 
 # 빌드 인자 정의 (api 또는 worker)
-ARG MODULE_NAME=zi-meet-api
+ARG MODULE_NAME=zi-meet-application
 ARG JAR_FILE=${MODULE_NAME}/build/libs/*.jar
 
 # JAR 파일 복사

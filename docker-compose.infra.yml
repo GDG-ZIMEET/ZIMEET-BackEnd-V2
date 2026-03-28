@@ -51,6 +51,24 @@ services:
       retries: 3
     restart: unless-stopped
 
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ""
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: zimeet
+    ports:
+      - "3307:3306"
+    networks:
+      - zimeet_network
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 20s
+      retries: 10
+
 networks:
   zimeet_network:
     external: true
@@ -58,3 +76,4 @@ networks:
 volumes:
   mongodb_data:
   rabbitmq_data:
+  mysql_data:

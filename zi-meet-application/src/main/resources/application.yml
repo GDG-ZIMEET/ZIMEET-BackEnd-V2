@@ -7,7 +7,7 @@ spring:
     timeout-per-shutdown-phase: 30s  # 종료 시 진행 중인 요청 완료 대기 시간
     
   datasource:
-    jdbc-url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DEFAULT_SCHEMA:zimeet}?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
+    jdbc-url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DEFAULT_SCHEMA:zimeet}?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -16,7 +16,7 @@ spring:
       pool-name: HikariCP-Business
 
   datasource-lock:
-    jdbc-url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DEFAULT_SCHEMA:zimeet}?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
+    jdbc-url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DEFAULT_SCHEMA:zimeet}?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver

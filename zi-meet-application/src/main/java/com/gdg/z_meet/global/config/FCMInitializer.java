@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 @Configuration
-@Profile("!test")  // 테스트 환경에서는 제외
+@Profile({ "!test", "!local" }) // 테스트 및 로컬 환경에서는 제외
 public class FCMInitializer {
 
     @Value("${firebase.admin-sdk}")
@@ -24,7 +24,7 @@ public class FCMInitializer {
         if (serviceAccountPath == null || serviceAccountPath.trim().isEmpty()) {
             return;
         }
-        
+
         try {
             // 파일 경로에서 JSON 파일 읽기
             InputStream serviceAccount = new FileInputStream(serviceAccountPath);

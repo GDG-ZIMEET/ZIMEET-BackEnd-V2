@@ -1,5 +1,3 @@
 rootProject.name = 'zi-meet'
 
 include 'zi-meet-application'
-include 'zi-meet-api'
-include 'zi-meet-worker'

@@ -17,7 +17,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * 트랜잭션 커밋 이후에 실제로 Redis Stream으로 메시지를 전송하는 리스너
  */
 @Component
-@Profile("!local")
 @RequiredArgsConstructor
 @Slf4j
 public class FcmMessageEventListener {
