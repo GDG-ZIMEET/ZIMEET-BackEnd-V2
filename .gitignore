@@ -72,3 +72,9 @@ ngrinder/
 
 zi-meet-application/bin/*
 */bin/*
+
+# Test and mock files
+/*.py
+/*.sh
+/*.pcap
+/*.sql
