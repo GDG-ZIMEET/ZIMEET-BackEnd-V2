@@ -10,15 +10,16 @@
 
 | Category | Stack |
 |---|---|
-| Language | Kotlin 1.9.25, Java 21 |
-| Framework | Spring Boot 3.4.9, Spring Cloud 2024.0.1 |
-| Database | MySQL, Redis 7 |
-| ORM | Spring Data JPA / Hibernate, Kotlin-JDSL 3.8.0 |
-| Auth | JWT, OAuth2 (Kakao, Apple) |
-| HTTP Client | Ktor Client 2.3.12 |
-| Push | Firebase FCM |
-| Observability | Micrometer, OpenTelemetry, Sentry, Prometheus |
-| Build | Gradle 8 (Kotlin DSL), Jib |
+| Language | Java 17 |
+| Framework | Spring Boot 3.3.1, Spring Cloud 2023.0.1 |
+| Database | MySQL, Redis, MongoDB |
+| ORM | Spring Data JPA / Hibernate, QueryDSL 5.0.0 |
+| Auth | JWT (jjwt) |
+| HTTP Client | Spring Cloud OpenFeign |
+| Push | Firebase Admin SDK (FCM) |
+| Observability | Micrometer, Prometheus, Actuator |
+| Resilience | Resilience4j (Circuit Breaker, Retry, Rate Limiter) |
+| Build | Gradle 8.11.1 |
 
 ---
 
