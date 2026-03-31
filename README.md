@@ -25,7 +25,10 @@
 
 ## Infrastructure
 
-<img width="1166" height="630" alt="스크린샷 2026-03-31 오후 4 58 25" src="https://github.com/user-attachments/assets/63ec7142-ee2b-4636-a47d-47a0ede0978c" />
+<img width="1368" height="534" alt="스크린샷 2026-03-31 오후 6 15 02" src="https://github.com/user-attachments/assets/8f855707-3918-4e5a-abee-9f0a0080380a" />
+
+
+---
 
 ![image](https://github.com/user-attachments/assets/5a29c5e0-44d9-4074-a2db-eb86382a1356)
 ![image](https://github.com/user-attachments/assets/ab23dcc9-555d-4549-a316-778bbcae8b49)
