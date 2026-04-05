@@ -1,5 +1,6 @@
 package com.gdg.z_meet.domain.order.entity;
 
+import com.gdg.z_meet.domain.booth.entity.Club;
 import com.gdg.z_meet.domain.order.entity.enums.OutboxStatus;
 import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
 import com.gdg.z_meet.domain.order.entity.enums.ProductType;
@@ -63,6 +64,16 @@ public class KakaoPayData extends BaseEntity {
 
     @Schema(description = "메시지 발행 시 필요한 데이터 (pg_token)")
     private String pgToken;
+
+    @Schema(description = "정산 여부")
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean isSettled = false;
+
+    @Schema(description = "부스 아이템인 경우 연결되는 부스 정보")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "club_id")
+    private Club club;
 
     @Schema(description = "메시지 재시도 횟수")
     @Builder.Default
@@ -201,6 +212,23 @@ public class KakaoPayData extends BaseEntity {
 
     public void markAsFailed() {
         this.outboxStatus = OutboxStatus.FAILED;
+    }
+
+    // Settlement methods
+    public boolean isSettled() {
+        return isSettled;
+    }
+
+    public void setSettled(boolean settled) {
+        isSettled = settled;
+    }
+
+    public Club getClub() {
+        return club;
+    }
+
+    public void setClub(Club club) {
+        this.club = club;
     }
 
     // --- Recovery Getters/Setters & Methods ---

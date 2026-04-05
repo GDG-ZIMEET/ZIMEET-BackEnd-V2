@@ -9,7 +9,8 @@ public enum ProductType {
     TWO_TO_TWO("2대2 미팅 하이", Map.of(1, 400, 3, 1000, 10, 3000)),
     THREE_TO_THREE("3대3 미팅 하이", Map.of(1, 400, 3, 1000, 10, 3000)),
     TICKET("1대1 티켓", Map.of(1, 500, 3, 1200, 8, 3000)),
-    SEASON("ZI-MEET Plus 시즌권", Map.of(1, 1900));
+    SEASON("ZI-MEET Plus 시즌권", Map.of(1, 1900)),
+    BOOTH_ITEM("부스 상품 결제", Map.of());
 
     private final String desc;
     private final Map<Integer, Integer> priceMap;
@@ -35,10 +36,13 @@ public enum ProductType {
      * @return 증분 수량
      */
     public int calculateIncreaseAmount(Long totalPrice) {
+        if (this.priceMap.isEmpty()) {
+            return 1;
+        }
         return this.priceMap.entrySet().stream()
                 .filter(entry -> entry.getValue().equals(totalPrice.intValue()))
                 .map(Map.Entry::getKey)
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Invalid total price: " + totalPrice));
+                .orElse(1); // Default to 1 for flexibility
     }
 }

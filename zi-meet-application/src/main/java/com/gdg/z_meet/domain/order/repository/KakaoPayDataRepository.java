@@ -31,4 +31,6 @@ public interface KakaoPayDataRepository extends JpaRepository<KakaoPayData, Long
         List<KakaoPayData> findRecoveryTasksToProcess(
                         @Param("now") java.time.LocalDateTime now,
                         org.springframework.data.domain.Pageable pageable);
+
+        List<KakaoPayData> findByStatusAndIsSettledFalse(com.gdg.z_meet.domain.order.entity.enums.PaymentStatus status);
 }
