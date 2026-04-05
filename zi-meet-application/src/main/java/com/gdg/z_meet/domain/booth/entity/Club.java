@@ -1,5 +1,6 @@
 package com.gdg.z_meet.domain.booth.entity;
 
+import com.gdg.z_meet.domain.order.entity.enums.Bank;
 import com.gdg.z_meet.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,6 +29,9 @@ public class Club extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Category category;
+
+    @Enumerated(EnumType.STRING)
+    private Bank bank;
 
     private String account;
 

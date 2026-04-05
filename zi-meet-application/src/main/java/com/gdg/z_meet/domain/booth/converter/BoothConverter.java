@@ -7,6 +7,8 @@ import com.gdg.z_meet.domain.booth.entity.Club;
 import com.gdg.z_meet.domain.booth.entity.Item;
 import com.gdg.z_meet.domain.booth.entity.Place;
 
+import com.gdg.z_meet.domain.order.entity.enums.Bank;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,6 +21,7 @@ public class BoothConverter {
                 .name(request.getName())
                 .rep(request.getRep())
                 .category(Category.valueOf(request.getCategory()))
+                .bank(request.getBank() != null ? Bank.valueOf(request.getBank()) : null)
                 .account(request.getAccount())
                 .time(request.getTime())
                 .info(request.getInfo())
@@ -49,6 +52,7 @@ public class BoothConverter {
                         .name(club.getName())
                         .rep(club.getRep())
                         .category(club.getCategory().toString())
+                        .bank(club.getBank() != null ? club.getBank().name() : null)
                         .account(club.getAccount())
                         .build())
                 .collect(Collectors.toList());
@@ -73,6 +77,7 @@ public class BoothConverter {
                 .name(club.getName())
                 .category(club.getCategory().toString())
                 .itemList(itemDTOS)
+                .bank(club.getBank() != null ? club.getBank().name() : null)
                 .account(club.getAccount())
                 .time(club.getTime())
                 .info(club.getInfo())

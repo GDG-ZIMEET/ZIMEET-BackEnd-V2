@@ -26,6 +26,7 @@ public class BoothResponseDTO {
         String name;
         String rep;
         String category;
+        String bank;
         String account;
     }
 
@@ -56,6 +57,7 @@ public class BoothResponseDTO {
         String name;
         String category;
         List<itemDTO> itemList;
+        String bank;
         String account;
         String time;
         String info;
