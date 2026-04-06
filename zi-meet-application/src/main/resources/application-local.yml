@@ -60,7 +60,7 @@ kakao:
     cancel-url: http://localhost:3000/purchase/cancel
     fail-url: http://localhost:3000/purchase/fail
     connection-timeout: 5000
-    read-timeout: 10000
+    read-timeout: 8000
 
 firebase:
   admin-sdk: /tmp/firebase-dummy.json

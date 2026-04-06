@@ -86,7 +86,7 @@ kakao:
     cancel-url: ${KAKAO_PAY_CANCEL_URL:http://localhost:3000/purchase/cancel}
     fail-url: ${KAKAO_PAY_FAIL_URL:http://localhost:3000/purchase/fail}
     connection-timeout: 5000  # Connection Timeout: 5초
-    read-timeout: 9000        # Read Timeout: 9초
+    read-timeout: 8000        # Read Timeout: 8초
 
 firebase:
   admin-sdk: ${FIREBASE_ADMIN_SDK_PATH}

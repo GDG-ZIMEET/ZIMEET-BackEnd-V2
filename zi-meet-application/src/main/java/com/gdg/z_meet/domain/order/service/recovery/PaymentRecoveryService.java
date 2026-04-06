@@ -19,7 +19,7 @@ public class PaymentRecoveryService {
     private final KakaoPayDataRepository kakaoPayDataRepository;
     private final com.gdg.z_meet.domain.order.service.cancel.KakaoPayCancelService kakaoPayCancelService;
 
-    private static final int MAX_RETRY_COUNT = 5;
+    private static final int MAX_RETRY_COUNT = 3;
 
     /**
      * 보상 트랜잭션 예약
