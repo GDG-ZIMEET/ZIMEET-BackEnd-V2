@@ -33,4 +33,6 @@ public interface KakaoPayDataRepository extends JpaRepository<KakaoPayData, Long
                         org.springframework.data.domain.Pageable pageable);
 
         List<KakaoPayData> findByStatusAndIsSettledFalse(com.gdg.z_meet.domain.order.entity.enums.PaymentStatus status);
+
+        List<KakaoPayData> findBySettlementId(Long settlementId);
 }

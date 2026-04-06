@@ -15,6 +15,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Slf4j
 @Service
@@ -69,12 +71,60 @@ public class SettlementService {
 
             settlementRepository.save(settlement);
 
-            // 결제 건 정산 완료 처리 (Update is_settled = true)
-            payments.forEach(p -> p.setSettled(true));
+            // 결제 건 정산 완료 처리 (Update is_settled = true) 및 연관관계 매핑
+            payments.forEach(p -> {
+                p.setSettled(true);
+                p.setSettlement(settlement);
+            });
             
             log.info("Settlement created for Club: {} (Amount: {})", club.getName(), settlementAmount);
         });
 
         log.info("Settlement process completed.");
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Settlement> getSettlements(
+            Settlement.SettlementStatus status,
+            Long clubId,
+            LocalDate startDate,
+            LocalDate endDate,
+            Pageable pageable) {
+        
+        if (status != null) {
+            return settlementRepository.findByStatus(status, pageable);
+        }
+        if (clubId != null) {
+            return settlementRepository.findByClubId(clubId, pageable);
+        }
+        if (startDate != null && endDate != null) {
+            return settlementRepository.findBySettlementDateBetween(startDate, endDate, pageable);
+        }
+        
+        return settlementRepository.findAll(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Settlement getSettlementDetail(Long settlementId) {
+        return settlementRepository.findById(settlementId)
+                .orElseThrow(() -> new IllegalArgumentException("Settlement not found"));
+    }
+
+    @Transactional
+    public void updateSettlementStatus(Long settlementId, Settlement.SettlementStatus newStatus) {
+        Settlement settlement = getSettlementDetail(settlementId);
+        if (newStatus == Settlement.SettlementStatus.PAID) {
+            settlement.markAsPaid();
+        } else if (newStatus == Settlement.SettlementStatus.FAILED) {
+            settlement.markAsFailed();
+        } else {
+            // Other transitions if allowed, but usually just PAID or FAILED from READY processing
+            throw new IllegalArgumentException("Unsupported status transition");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<KakaoPayData> getPaymentsBySettlement(Long settlementId) {
+        return kakaoPayDataRepository.findBySettlementId(settlementId);
     }
 }

@@ -71,6 +71,7 @@ public class PaymentItemGrantFacade implements ItemGrantService {
         return switch (productType) {
             case TWO_TO_TWO, THREE_TO_THREE -> grantTeamHi(productType, totalPrice, buyer);
             case TICKET, SEASON -> grantProfileProduct(productType, totalPrice, buyer);
+            case BOOTH_ITEM -> new ItemGrantResult(null, null);
         };
     }
 

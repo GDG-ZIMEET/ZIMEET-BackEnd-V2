@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import com.gdg.z_meet.domain.settlement.entity.Settlement;
 
 @Entity
 @NoArgsConstructor
@@ -74,6 +75,11 @@ public class KakaoPayData extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "club_id")
     private Club club;
+
+    @Schema(description = "관련된 정산(Settlement) 엔티티, 소급/일괄 정산 시점에 세팅됨")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "settlement_id")
+    private Settlement settlement;
 
     @Schema(description = "메시지 재시도 횟수")
     @Builder.Default
@@ -229,6 +235,14 @@ public class KakaoPayData extends BaseEntity {
 
     public void setClub(Club club) {
         this.club = club;
+    }
+
+    public Settlement getSettlement() {
+        return settlement;
+    }
+
+    public void setSettlement(Settlement settlement) {
+        this.settlement = settlement;
     }
 
     // --- Recovery Getters/Setters & Methods ---
