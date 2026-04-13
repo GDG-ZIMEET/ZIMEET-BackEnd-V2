@@ -65,7 +65,7 @@ public class AdminSettlementController {
     public ResponseEntity<String> updateSettlementStatus(
             @PathVariable Long settlementId,
             @RequestBody SettlementStatusUpdateRequest request) {
-        settlementService.updateSettlementStatus(settlementId, request.getStatus());
+        settlementService.updateSettlementStatus(settlementId, request.getStatus(), null);
         return ResponseEntity.ok("정산 상태가 " + request.getStatus() + "로 변경되었습니다.");
     }
 }

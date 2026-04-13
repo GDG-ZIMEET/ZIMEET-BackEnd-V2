@@ -44,6 +44,10 @@ public class Settlement extends BaseEntity {
 
     private String account;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true)
+    private SettlementFailureReason failureReason;
+
     public enum SettlementStatus {
         READY,      // 정산 데이터 생성됨
         PROCESSING, // 지급 처리 중
@@ -51,11 +55,39 @@ public class Settlement extends BaseEntity {
         FAILED      // 지급 실패
     }
 
-    public void markAsPaid() {
-        this.status = SettlementStatus.PAID;
+    /** 기존 결제 로직의 에러 코드 기반 정산 실패 사유 */
+    public enum SettlementFailureReason {
+        KAKAO_API_ERROR("카카오 API 응답 오류"),          // KAKAO_5001
+        INVALID_KAKAO_RESPONSE("잘못된 카카오 API 응답"), // KAKAO_5002
+        INVALID_BUYER("결제자 정보 불일치"),              // KAKAO_4001
+        PAYMENT_NOT_FOUND("결제 정보 없음"),              // PAYMENT_4004
+        INVALID_ACCOUNT("계좌 정보 오류"),                // 계좌 폐쇄·오류
+        SYSTEM_ERROR("시스템 오류"),                      // COMMON500
+        MANUAL("수동 처리 실패");
+
+        private final String description;
+
+        SettlementFailureReason(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
     }
 
-    public void markAsFailed() {
+    public void markAsPaid() {
+        this.status = SettlementStatus.PAID;
+        this.failureReason = null;
+    }
+
+    public void markAsFailed(SettlementFailureReason reason) {
         this.status = SettlementStatus.FAILED;
+        this.failureReason = reason;
+    }
+
+    /** 하위 호환 — 사유 없이 FAILED 처리 */
+    public void markAsFailed() {
+        markAsFailed(null);
     }
 }

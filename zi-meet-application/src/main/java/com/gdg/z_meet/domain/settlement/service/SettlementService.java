@@ -1,6 +1,7 @@
 package com.gdg.z_meet.domain.settlement.service;
 
 import com.gdg.z_meet.domain.booth.entity.Club;
+import com.gdg.z_meet.domain.booth.repository.ClubRepository;
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
 import com.gdg.z_meet.domain.order.repository.KakaoPayDataRepository;
@@ -25,9 +26,60 @@ public class SettlementService {
 
     private final KakaoPayDataRepository kakaoPayDataRepository;
     private final SettlementRepository settlementRepository;
+    private final ClubRepository clubRepository;
 
     private static final double PG_FEE_RATE = 0.033; // 3.3% PG 수수료 (예시)
     private static final double PLATFORM_FEE_RATE = 0.05; // 5.0% 플랫폼 수수료 (예시)
+
+    // ── 부스별 정산 현황 요약 ──────────────────────────────────────
+    @Transactional(readOnly = true)
+    public List<ClubSettlementSummary> getClubSettlementSummaries() {
+        return clubRepository.findAll(org.springframework.data.domain.Sort.by("name"))
+                .stream()
+                .map(club -> {
+                    long count = kakaoPayDataRepository.countByClubIdAndStatusAndIsSettledFalse(
+                            club.getId(), PaymentStatus.APPROVED);
+                    long amount = kakaoPayDataRepository.sumTotalPriceByClubIdAndStatusAndIsSettledFalse(
+                            club.getId(), PaymentStatus.APPROVED);
+                    Settlement last = settlementRepository
+                            .findTopByClubIdOrderBySettlementDateDesc(club.getId()).orElse(null);
+                    return new ClubSettlementSummary(club, count, amount, last);
+                })
+                .toList();
+    }
+
+    // ── 특정 부스만 정산 실행 ─────────────────────────────────────
+    @Transactional
+    public void processSettlementForClub(Long clubId) {
+        List<KakaoPayData> payments = kakaoPayDataRepository
+                .findByClubIdAndStatusAndIsSettledFalse(clubId, PaymentStatus.APPROVED);
+        if (payments.isEmpty()) {
+            throw new IllegalStateException("미정산 결제가 없습니다.");
+        }
+
+        Club club = payments.get(0).getClub();
+        long totalAmount = payments.stream().mapToLong(KakaoPayData::getTotalPrice).sum();
+        long pgFee = (long) (totalAmount * PG_FEE_RATE);
+        long platformFee = (long) (totalAmount * PLATFORM_FEE_RATE);
+
+        Settlement settlement = Settlement.builder()
+                .club(club)
+                .totalAmount(totalAmount)
+                .feeAmount(pgFee + platformFee)
+                .settlementAmount(totalAmount - pgFee - platformFee)
+                .status(Settlement.SettlementStatus.READY)
+                .settlementDate(java.time.LocalDate.now())
+                .bank(club.getBank())
+                .account(club.getAccount())
+                .build();
+        settlementRepository.save(settlement);
+
+        payments.forEach(p -> {
+            p.setSettled(true);
+            p.setSettlement(settlement);
+        });
+        log.info("Settlement created for Club: {} (Amount: {})", club.getName(), settlement.getSettlementAmount());
+    }
 
     @Transactional
     public void processDelayedSettlement() {
@@ -111,14 +163,14 @@ public class SettlementService {
     }
 
     @Transactional
-    public void updateSettlementStatus(Long settlementId, Settlement.SettlementStatus newStatus) {
+    public void updateSettlementStatus(Long settlementId, Settlement.SettlementStatus newStatus,
+                                       Settlement.SettlementFailureReason reason) {
         Settlement settlement = getSettlementDetail(settlementId);
         if (newStatus == Settlement.SettlementStatus.PAID) {
             settlement.markAsPaid();
         } else if (newStatus == Settlement.SettlementStatus.FAILED) {
-            settlement.markAsFailed();
+            settlement.markAsFailed(reason);
         } else {
-            // Other transitions if allowed, but usually just PAID or FAILED from READY processing
             throw new IllegalArgumentException("Unsupported status transition");
         }
     }
@@ -127,4 +179,37 @@ public class SettlementService {
     public List<KakaoPayData> getPaymentsBySettlement(Long settlementId) {
         return kakaoPayDataRepository.findBySettlementId(settlementId);
     }
+
+    @Transactional(readOnly = true)
+    public SettlementStats getStats() {
+        long readyCount       = settlementRepository.countByStatus(Settlement.SettlementStatus.READY);
+        long processingCount  = settlementRepository.countByStatus(Settlement.SettlementStatus.PROCESSING);
+        long paidCount        = settlementRepository.countByStatus(Settlement.SettlementStatus.PAID);
+        long failedCount      = settlementRepository.countByStatus(Settlement.SettlementStatus.FAILED);
+        long totalPaidAmount  = settlementRepository.sumSettlementAmountByStatus(Settlement.SettlementStatus.PAID);
+        long totalPendingAmount = settlementRepository.sumSettlementAmountByStatus(Settlement.SettlementStatus.READY)
+                + settlementRepository.sumSettlementAmountByStatus(Settlement.SettlementStatus.PROCESSING);
+        long totalPaymentCount   = kakaoPayDataRepository.countByStatus(PaymentStatus.APPROVED);
+        long unsettledPaymentCount = kakaoPayDataRepository.countByStatusAndIsSettledFalse(PaymentStatus.APPROVED);
+        return new SettlementStats(readyCount, processingCount, paidCount, failedCount,
+                totalPaidAmount, totalPendingAmount, totalPaymentCount, unsettledPaymentCount);
+    }
+
+    public record ClubSettlementSummary(
+            Club club,
+            long unsettledCount,
+            long unsettledAmount,
+            Settlement lastSettlement   // nullable
+    ) {}
+
+    public record SettlementStats(
+            long readyCount,
+            long processingCount,
+            long paidCount,
+            long failedCount,
+            long totalPaidAmount,
+            long totalPendingAmount,
+            long totalPaymentCount,       // 전체 결제 건수 (APPROVED)
+            long unsettledPaymentCount    // 미정산 결제 건수
+    ) {}
 }

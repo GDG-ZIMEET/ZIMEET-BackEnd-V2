@@ -74,7 +74,15 @@ zi-meet-application/bin/*
 */bin/*
 
 # Test and mock files
+test-scripts/
 /*.py
 /*.sh
 /*.pcap
 /*.sql
+
+# Admin dashboard & data initializer (local dev only)
+zi-meet-application/src/main/java/com/gdg/z_meet/domain/settlement/controller/AdminViewController.java
+zi-meet-application/src/main/java/com/gdg/z_meet/global/init/
+zi-meet-application/src/main/resources/templates/
+stomp-vuln-test.html
+.claude/launch.json

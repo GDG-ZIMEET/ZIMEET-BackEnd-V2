@@ -34,5 +34,16 @@ public interface KakaoPayDataRepository extends JpaRepository<KakaoPayData, Long
 
         List<KakaoPayData> findByStatusAndIsSettledFalse(com.gdg.z_meet.domain.order.entity.enums.PaymentStatus status);
 
+        long countByStatus(com.gdg.z_meet.domain.order.entity.enums.PaymentStatus status);
+
+        long countByStatusAndIsSettledFalse(com.gdg.z_meet.domain.order.entity.enums.PaymentStatus status);
+
+        List<KakaoPayData> findByClubIdAndStatusAndIsSettledFalse(Long clubId, com.gdg.z_meet.domain.order.entity.enums.PaymentStatus status);
+
+        long countByClubIdAndStatusAndIsSettledFalse(Long clubId, com.gdg.z_meet.domain.order.entity.enums.PaymentStatus status);
+
+        @Query("SELECT COALESCE(SUM(k.totalPrice), 0) FROM KakaoPayData k WHERE k.club.id = :clubId AND k.status = :status AND k.isSettled = false")
+        long sumTotalPriceByClubIdAndStatusAndIsSettledFalse(@Param("clubId") Long clubId, @Param("status") com.gdg.z_meet.domain.order.entity.enums.PaymentStatus status);
+
         List<KakaoPayData> findBySettlementId(Long settlementId);
 }

@@ -17,6 +17,7 @@ public class SettlementResponseDTO {
     private Long feeAmount;
     private Long settlementAmount;
     private Settlement.SettlementStatus status;
+    private Settlement.SettlementFailureReason failureReason;
     private LocalDate settlementDate;
     private Bank bank;
     private String account;
@@ -30,6 +31,7 @@ public class SettlementResponseDTO {
                 .feeAmount(settlement.getFeeAmount())
                 .settlementAmount(settlement.getSettlementAmount())
                 .status(settlement.getStatus())
+                .failureReason(settlement.getFailureReason())
                 .settlementDate(settlement.getSettlementDate())
                 .bank(settlement.getBank())
                 .account(settlement.getAccount())
