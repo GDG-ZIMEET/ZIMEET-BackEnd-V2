@@ -56,6 +56,12 @@ dependencies {
 	// Monitoring
 	api 'org.springframework.boot:spring-boot-starter-actuator'
 	api 'io.micrometer:micrometer-registry-prometheus'
+
+	// Thymeleaf (어드민 UI)
+	api 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+	// Apache POI (Excel 내보내기)
+	api 'org.apache.poi:poi-ooxml:5.2.5'
 }
 
 bootJar {

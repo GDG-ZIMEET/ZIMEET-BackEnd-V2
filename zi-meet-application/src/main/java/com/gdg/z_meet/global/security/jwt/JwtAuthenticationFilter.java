@@ -46,7 +46,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.startsWith("/api/user")
                 || path.startsWith("/api/ws") || path.startsWith("/api/ws/info")
                 || path.startsWith("/ws") || path.startsWith("/ws/info")
-                || path.startsWith("/api/test");
+                || path.startsWith("/api/test")
+                || path.startsWith("/admin");   // 어드민 UI — JWT 필터 스킵
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.gdg.z_meet.global.security.jwt;
 
+import com.gdg.z_meet.domain.chat.repository.JoinChatRepository;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,7 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -21,7 +23,7 @@ import java.security.Principal;
 public class StompHandler implements ChannelInterceptor {
 
     private final JwtUtil jwtUtil;
-//    private final ChatRoomService chatRoomService;
+    private final JoinChatRepository joinChatRepository;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -80,18 +82,18 @@ public class StompHandler implements ChannelInterceptor {
 //            }
 
             String userId = accessor.getUser().getName(); // CONNECT 시 저장한 Principal (userId)
-            String destination = accessor.getDestination();  // 예: /sub/chat/room/3
+            String destination = accessor.getDestination();
             Long chatRoomId = extractRoomIdFromDestination(destination);
 
-            //chatRoomService에서 hasAccess 메서드로 권한 확인 추가 예정
+            Boolean hasAccess = joinChatRepository.existsByUserIdAndChatRoomIdAndStatusActive(
+                    Long.parseLong(userId), chatRoomId);
 
-//            if (!chatRoomService.hasAccess(email, chatRoomId)) {
-//                log.warn("채팅방 접근 권한 없음 - userEmail: {}, roomId: {}", email, chatRoomId);
-//                //throw new AccessDeniedException("채팅방 접근 권한 없음");
-//                return null;  //예외 반환시 웹소켓 연결 해제되는 현상 방지위해 null 반환
-//            }
+            if (!hasAccess) {
+                log.warn("[SECURITY-FIXED] SUBSCRIBE 거부 — userId: {}, destination: {} (roomId: {})", userId, destination, chatRoomId);
+                throw new AccessDeniedException("채팅방 접근 권한 없음 — userId: " + userId + ", roomId: " + chatRoomId);
+            }
 
-            log.info("채팅방 구독 허용 - userId: {}, roomId: {}", userId, chatRoomId);
+            log.info("[SECURITY-FIXED] SUBSCRIBE 허용 — userId: {}, destination: {} (roomId: {})", userId, destination, chatRoomId);
         }
 
         if (StompCommand.DISCONNECT.equals(command)) {

@@ -86,3 +86,12 @@ zi-meet-application/src/main/java/com/gdg/z_meet/global/init/
 zi-meet-application/src/main/resources/templates/
 stomp-vuln-test.html
 .claude/launch.json
+
+# Local config (sensitive / environment-specific)
+zi-meet-application/src/main/resources/application-local.yml
+
+# Monitoring data files
+monitoring/loki/wal/
+
+# Integration tests (external service dependent — KakaoPay sandbox)
+zi-meet-application/src/test/java/com/gdg/z_meet/domain/order/integration/

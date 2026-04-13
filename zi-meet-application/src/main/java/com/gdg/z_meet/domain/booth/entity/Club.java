@@ -39,4 +39,9 @@ public class Club extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String info;
+
+    public void updateBankAccount(Bank bank, String account) {
+        this.bank = bank;
+        this.account = account;
+    }
 }

@@ -21,7 +21,8 @@ public class SecurityConfig {
         @Bean
         public WebSecurityCustomizer webSecurityCustomizer() {
                 return (web) -> web.ignoring()
-                                .requestMatchers("/signup", "login", "/actuator/**", "/api/test/**");
+                                .requestMatchers("/signup", "login", "/actuator/**", "/api/test/**")
+                                .requestMatchers("/admin/**");  // 어드민 UI — JWT 필터 체인 완전 우회
         }
 
         @Bean
@@ -48,6 +49,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/test/**").permitAll() // 테스트 API 허용
                                                 .requestMatchers("/actuator/**").permitAll() // 모니터링 메트릭
                                                 .requestMatchers("/error").permitAll()
+                                                .requestMatchers("/admin/**").permitAll() // 어드민 UI
                                                 .anyRequest().authenticated() // 나머지 요청은 인증 필요
                                 )
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
