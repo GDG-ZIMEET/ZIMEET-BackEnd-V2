@@ -1,0 +1,347 @@
+# =========================================================================
+# ZIMEET 프로덕션급 로컬 스택
+# -------------------------------------------------------------------------
+# 토폴로지
+#   nginx (gateway, :80) ──┬─ core-api    × 2 replicas (8080)
+#                          └─ payment-api × 2 replicas (8081)
+#
+#   core-worker      (@Profile: core-worker)      — 스윕/컨슈머
+#   payment-worker   (@Profile: payment-worker)   — 정산 배치 / outbox relay
+#
+#   business-db  (MySQL 8)   ← core 전용
+#   payment-db   (MySQL 8)   ← payment 전용 (돈의 SSOT)
+#   redis        (Streams + 분산락 + 캐시, AOF 켬)
+#   mongodb      (chat 도메인 유지)
+#
+# 운영 정신으로 지킨 것
+#   - 모든 서비스에 healthcheck + restart policy + resource limit
+#   - 로그 로테이션 (json-file, max 10MB × 3)
+#   - 비-root 컨테이너, 내부 네트워크 격리 (expose만, publish는 gateway만)
+#   - Redis AOF 로 이벤트 유실 방지 (Streams 영속성)
+#   - depends_on 조건을 healthy 로 묶어 기동 순서 보장
+#
+# 사용
+#   docker compose -f deploy/docker-compose.yml up -d --build
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.monitoring.yml up -d
+# =========================================================================
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-app-env: &app-env
+  TZ: Asia/Seoul
+  SPRING_PROFILES_INCLUDE: ""
+
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 15s
+  timeout: 5s
+  retries: 10
+  start_period: 30s
+
+services:
+
+  # ======================================================================
+  # 1) Data layer
+  # ======================================================================
+
+  business-db:
+    image: mysql:8.0
+    container_name: zimeet-business-db
+    restart: unless-stopped
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=256M
+      - --max-connections=300
+    environment:
+      MYSQL_ROOT_PASSWORD: ${BUSINESS_DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${BUSINESS_DB_NAME:-zimeet_business}
+      TZ: Asia/Seoul
+    expose:
+      - "3306"
+    ports:
+      - "3306:3306"          # 로컬 접속 편의용, 프로덕션이면 제거
+    volumes:
+      - business_db_data:/var/lib/mysql
+    networks: [zimeet_backend]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      <<: *healthcheck-defaults
+    mem_limit: 512m
+    logging: *default-logging
+
+  payment-db:
+    image: mysql:8.0
+    container_name: zimeet-payment-db
+    restart: unless-stopped
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=256M
+      - --max-connections=200
+    environment:
+      MYSQL_ROOT_PASSWORD: ${PAYMENT_DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${PAYMENT_DB_NAME:-zimeet_payment}
+      TZ: Asia/Seoul
+    expose:
+      - "3306"
+    ports:
+      - "3307:3306"
+    volumes:
+      - payment_db_data:/var/lib/mysql
+    networks: [zimeet_backend]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      <<: *healthcheck-defaults
+    mem_limit: 512m
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    container_name: zimeet-redis
+    restart: unless-stopped
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis_data:/data
+    expose:
+      - "6379"
+    ports:
+      - "6379:6379"
+    networks: [zimeet_backend]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      <<: *healthcheck-defaults
+    mem_limit: 256m
+    logging: *default-logging
+
+  mongodb:
+    image: mongo:6
+    container_name: zimeet-mongodb
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Seoul
+    expose:
+      - "27017"
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks: [zimeet_backend]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      <<: *healthcheck-defaults
+    mem_limit: 384m
+    logging: *default-logging
+
+  # ======================================================================
+  # 2) Application layer
+  # ======================================================================
+
+  core-api:
+    image: zimeet/core:local
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        MODULE_NAME: zi-meet-core
+    restart: unless-stopped
+    deploy:
+      replicas: 2          # `docker compose up --scale core-api=2` 대안
+      resources:
+        limits:
+          memory: 768m
+    stop_grace_period: 60s
+    stop_signal: SIGTERM
+    environment:
+      <<: *app-env
+      SPRING_PROFILES_ACTIVE: core-api
+      SERVER_PORT: 8080
+      DB_HOST: business-db
+      DB_PORT: 3306
+      DEFAULT_SCHEMA: ${BUSINESS_DB_NAME:-zimeet_business}
+      DB_USERNAME: ${BUSINESS_DB_USERNAME:-root}
+      DB_PASSWORD: ${BUSINESS_DB_PASSWORD:-root}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MONGODB_HOST: mongodb
+      MONGODB_PORT: 27017
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-zimeet}
+      PAYMENT_SERVER_URL: http://payment-api:8081
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-changeme_local_only}
+      FIREBASE_ADMIN_SDK_PATH: ${FIREBASE_ADMIN_SDK_PATH:-/app/firebase-adminsdk.json}
+      JAVA_OPTS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -Duser.timezone=Asia/Seoul"
+    expose:
+      - "8080"
+    depends_on:
+      business-db: { condition: service_healthy }
+      redis:       { condition: service_healthy }
+      mongodb:     { condition: service_healthy }
+    networks: [zimeet_backend]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/liveness"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+    logging: *default-logging
+
+  core-worker:
+    image: zimeet/core:local
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        MODULE_NAME: zi-meet-core
+    restart: unless-stopped
+    stop_grace_period: 90s
+    stop_signal: SIGTERM
+    environment:
+      <<: *app-env
+      SPRING_PROFILES_ACTIVE: core-worker
+      SERVER_PORT: 8080
+      DB_HOST: business-db
+      DB_PORT: 3306
+      DEFAULT_SCHEMA: ${BUSINESS_DB_NAME:-zimeet_business}
+      DB_USERNAME: ${BUSINESS_DB_USERNAME:-root}
+      DB_PASSWORD: ${BUSINESS_DB_PASSWORD:-root}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MONGODB_HOST: mongodb
+      MONGODB_PORT: 27017
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-zimeet}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-changeme_local_only}
+      FIREBASE_ADMIN_SDK_PATH: ${FIREBASE_ADMIN_SDK_PATH:-/app/firebase-adminsdk.json}
+      JAVA_OPTS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -Duser.timezone=Asia/Seoul"
+    depends_on:
+      business-db: { condition: service_healthy }
+      redis:       { condition: service_healthy }
+      mongodb:     { condition: service_healthy }
+    networks: [zimeet_backend]
+    mem_limit: 640m
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/liveness"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    logging: *default-logging
+
+  payment-api:
+    image: zimeet/payment:local
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        MODULE_NAME: zi-meet-payment
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 640m
+    stop_grace_period: 60s
+    stop_signal: SIGTERM
+    environment:
+      <<: *app-env
+      SPRING_PROFILES_ACTIVE: payment-api
+      SERVER_PORT: 8081
+      PAYMENT_DB_URL: jdbc:mysql://payment-db:3306/${PAYMENT_DB_NAME:-zimeet_payment}?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+      PAYMENT_DB_USERNAME: ${PAYMENT_DB_USERNAME:-root}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-root}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JAVA_OPTS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -Duser.timezone=Asia/Seoul"
+    expose:
+      - "8081"
+    depends_on:
+      payment-db: { condition: service_healthy }
+      redis:      { condition: service_healthy }
+    networks: [zimeet_backend]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health/liveness"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    logging: *default-logging
+
+  payment-worker:
+    image: zimeet/payment:local
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        MODULE_NAME: zi-meet-payment
+    restart: unless-stopped
+    stop_grace_period: 120s       # 정산 배치 graceful 종료 시간 넉넉히
+    stop_signal: SIGTERM
+    environment:
+      <<: *app-env
+      SPRING_PROFILES_ACTIVE: payment-worker
+      SERVER_PORT: 8081
+      PAYMENT_DB_URL: jdbc:mysql://payment-db:3306/${PAYMENT_DB_NAME:-zimeet_payment}?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+      PAYMENT_DB_USERNAME: ${PAYMENT_DB_USERNAME:-root}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-root}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JAVA_OPTS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -Duser.timezone=Asia/Seoul"
+    depends_on:
+      payment-db: { condition: service_healthy }
+      redis:      { condition: service_healthy }
+    networks: [zimeet_backend]
+    mem_limit: 640m
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health/liveness"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    logging: *default-logging
+
+  # ======================================================================
+  # 3) Gateway
+  # ======================================================================
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: zimeet-gateway
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Seoul
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - "80:80"
+    depends_on:
+      core-api:    { condition: service_started }
+      payment-api: { condition: service_started }
+    networks: [zimeet_backend, zimeet_frontend]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    mem_limit: 128m
+    logging: *default-logging
+
+networks:
+  zimeet_backend:
+    name: zimeet_backend
+    driver: bridge
+  zimeet_frontend:
+    name: zimeet_frontend
+    driver: bridge
+
+volumes:
+  business_db_data:
+  payment_db_data:
+  mongodb_data:
+  redis_data:

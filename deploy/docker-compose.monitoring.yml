@@ -1,0 +1,151 @@
+# =========================================================================
+# 관측성 스택 (overlay)
+#
+# 사용: docker compose -f deploy/docker-compose.yml \
+#                      -f deploy/docker-compose.monitoring.yml up -d
+#
+# 포함:
+#   - Prometheus (scrape)
+#   - Grafana    (dashboard)
+#   - Loki       (log aggregation)
+#   - Promtail   (log shipper)
+#   - redis-exporter
+#   - business-db-exporter, payment-db-exporter
+# =========================================================================
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: zimeet-prometheus
+    restart: unless-stopped
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks: [zimeet_backend]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    mem_limit: 384m
+    logging: *default-logging
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: zimeet-grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PW:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      TZ: Asia/Seoul
+    ports:
+      - "3000:3000"
+    networks: [zimeet_backend]
+    depends_on:
+      prometheus: { condition: service_healthy }
+    mem_limit: 256m
+    logging: *default-logging
+
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: zimeet-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks: [zimeet_backend]
+    mem_limit: 256m
+    logging: *default-logging
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: zimeet-promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ../monitoring/promtail:/etc/promtail:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks: [zimeet_backend]
+    depends_on:
+      loki: { condition: service_started }
+    mem_limit: 128m
+    logging: *default-logging
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: zimeet-redis-exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    networks: [zimeet_backend]
+    depends_on:
+      - redis
+    mem_limit: 64m
+    logging: *default-logging
+
+  business-db-exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    container_name: zimeet-business-db-exporter
+    restart: unless-stopped
+    command:
+      - '--mysqld.address=business-db:3306'
+      - '--mysqld.username=${BUSINESS_DB_USERNAME:-root}'
+      - '--collect.info_schema.processlist'
+      - '--collect.info_schema.innodb_metrics'
+      - '--collect.perf_schema.eventsstatements'
+    environment:
+      MYSQLD_EXPORTER_PASSWORD: ${BUSINESS_DB_PASSWORD:-root}
+    networks: [zimeet_backend]
+    depends_on:
+      - business-db
+    mem_limit: 64m
+    logging: *default-logging
+
+  payment-db-exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    container_name: zimeet-payment-db-exporter
+    restart: unless-stopped
+    command:
+      - '--mysqld.address=payment-db:3306'
+      - '--mysqld.username=${PAYMENT_DB_USERNAME:-root}'
+      - '--collect.info_schema.processlist'
+      - '--collect.info_schema.innodb_metrics'
+      - '--collect.perf_schema.eventsstatements'
+    environment:
+      MYSQLD_EXPORTER_PASSWORD: ${PAYMENT_DB_PASSWORD:-root}
+    networks: [zimeet_backend]
+    depends_on:
+      - payment-db
+    mem_limit: 64m
+    logging: *default-logging
+
+networks:
+  zimeet_backend:
+    external: true
+    name: zimeet_backend
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:
