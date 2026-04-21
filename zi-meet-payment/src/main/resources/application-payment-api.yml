@@ -1,0 +1,7 @@
+# payment-api 프로파일
+# REST 엔드포인트(결제 승인/취소/조회, 정산 어드민 조회)만 담당.
+# 스케줄링, Outbox Relay, 정산 배치는 돌지 않는다.
+spring:
+  task:
+    scheduling:
+      enabled: false

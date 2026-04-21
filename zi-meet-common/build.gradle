@@ -1,0 +1,14 @@
+plugins {
+    id 'java-library'
+}
+
+bootJar { enabled = false }
+jar { enabled = true }
+
+dependencies {
+    // 공통 모듈은 프레임워크에 대한 최소 의존만 가진다.
+    // core/payment 양쪽에서 필요한 타입 + 이벤트 스키마만 들어간다.
+    api 'com.fasterxml.jackson.core:jackson-annotations'
+    api 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    api 'org.springframework.boot:spring-boot-starter-validation'
+}

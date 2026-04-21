@@ -1,0 +1,7 @@
+# payment-worker 프로파일
+# @Scheduled 배치와 Outbox Relay 가 동작한다.
+# REST 엔드포인트는 살려두되, 로드밸런서에서는 API 프로파일에만 트래픽을 보낸다.
+spring:
+  task:
+    scheduling:
+      enabled: true

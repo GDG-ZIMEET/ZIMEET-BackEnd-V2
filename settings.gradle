@@ -1,3 +1,5 @@
 rootProject.name = 'zi-meet'
 
-include 'zi-meet-application'
+include 'zi-meet-common'
+include 'zi-meet-core'
+include 'zi-meet-payment'
