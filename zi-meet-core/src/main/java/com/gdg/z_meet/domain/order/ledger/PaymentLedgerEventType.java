@@ -1,0 +1,13 @@
+package com.gdg.z_meet.domain.order.ledger;
+
+public enum PaymentLedgerEventType {
+    LEGACY_IMPORTED,
+    PAYMENT_PREPARED,
+    PAYMENT_PROCESSING_STARTED,
+    PAYMENT_APPROVED,
+    PAYMENT_FAILED,
+    PAYMENT_UNKNOWN,
+    PAYMENT_CANCELLED,
+    PAYMENT_RECOVERED,
+    ADMIN_CORRECTED
+}

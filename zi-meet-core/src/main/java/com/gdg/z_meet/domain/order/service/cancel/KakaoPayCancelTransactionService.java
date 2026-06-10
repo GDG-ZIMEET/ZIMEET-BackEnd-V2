@@ -2,6 +2,8 @@ package com.gdg.z_meet.domain.order.service.cancel;
 
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
+import com.gdg.z_meet.domain.order.ledger.PaymentLedgerActorType;
+import com.gdg.z_meet.domain.order.ledger.PaymentLedgerRecorder;
 import com.gdg.z_meet.domain.order.repository.KakaoPayDataRepository;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class KakaoPayCancelTransactionService {
 
     private final KakaoPayDataRepository kakaoPayDataRepository;
+    private final PaymentLedgerRecorder paymentLedgerRecorder;
 
     /**
      * 결제 취소 전 데이터 조회 및 검증
@@ -63,8 +66,7 @@ public class KakaoPayCancelTransactionService {
         KakaoPayData kakaoPayData = kakaoPayDataRepository.findById(kakaoPayDataId)
                 .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
 
-        kakaoPayData.setStatus(PaymentStatus.CANCELLED);
-        kakaoPayDataRepository.save(kakaoPayData);
+        updateStatus(kakaoPayDataId, PaymentStatus.CANCELLED);
     }
 
     /**
@@ -76,8 +78,19 @@ public class KakaoPayCancelTransactionService {
             KakaoPayData kakaoPayData = kakaoPayDataRepository.findById(kakaoPayDataId)
                     .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
 
+            PaymentStatus previousStatus = kakaoPayData.getStatus();
             kakaoPayData.setStatus(PaymentStatus.FAILED);
             kakaoPayDataRepository.save(kakaoPayData);
+            paymentLedgerRecorder.record(
+                    kakaoPayData,
+                    previousStatus,
+                    PaymentStatus.FAILED,
+                    PaymentLedgerActorType.SYSTEM,
+                    "kakao-pay-cancel",
+                    "Payment cancel failed",
+                    "cancel-failed-" + kakaoPayData.getOrderId(),
+                    "source=kakao_pay_cancel"
+            );
         } catch (Exception e) {
             log.error("상태 업데이트 실패 - kakaoPayDataId: {}, error: {}", kakaoPayDataId, e.getMessage(), e);
         }
@@ -90,7 +103,18 @@ public class KakaoPayCancelTransactionService {
     public void updateStatus(Long kakaoPayDataId, PaymentStatus status) {
         KakaoPayData kakaoPayData = kakaoPayDataRepository.findById(kakaoPayDataId)
                 .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
+        PaymentStatus previousStatus = kakaoPayData.getStatus();
         kakaoPayData.setStatus(status);
         kakaoPayDataRepository.save(kakaoPayData);
+        paymentLedgerRecorder.record(
+                kakaoPayData,
+                previousStatus,
+                status,
+                PaymentLedgerActorType.SYSTEM,
+                "kakao-pay-cancel",
+                "Payment status updated by cancel flow",
+                "cancel-status-" + kakaoPayData.getOrderId() + "-" + status,
+                "source=kakao_pay_cancel"
+        );
     }
 }

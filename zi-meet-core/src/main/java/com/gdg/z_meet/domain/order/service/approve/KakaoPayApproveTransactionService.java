@@ -7,6 +7,8 @@ import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.order.entity.enums.OutboxStatus;
 import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
 import com.gdg.z_meet.domain.order.entity.enums.ProductType;
+import com.gdg.z_meet.domain.order.ledger.PaymentLedgerActorType;
+import com.gdg.z_meet.domain.order.ledger.PaymentLedgerRecorder;
 import com.gdg.z_meet.domain.order.repository.KakaoItemPurchaseRepository;
 import com.gdg.z_meet.domain.order.repository.KakaoPayDataRepository;
 import com.gdg.z_meet.domain.user.entity.User;
@@ -27,6 +29,7 @@ public class KakaoPayApproveTransactionService {
     private final KakaoItemPurchaseRepository itemPurchaseRepository;
     /** Facade 인터페이스에 의존 - Order 도메인은 User/Meeting Repository를 직접 알지 못함 */
     private final ItemGrantService itemGrantService;
+    private final PaymentLedgerRecorder paymentLedgerRecorder;
 
     /**
      * 결제 시도 (검증 및 상태 변경)
@@ -49,9 +52,20 @@ public class KakaoPayApproveTransactionService {
 
         // 상태 변경 (PREPARED -> PROCESSING) 및 아웃박스 등록
         if (kakaoPayData.getStatus() == PaymentStatus.PREPARED) {
+            PaymentStatus previousStatus = kakaoPayData.getStatus();
             kakaoPayData.setStatus(PaymentStatus.PROCESSING);
             kakaoPayData.setPgToken(parameter.getPgToken());
             kakaoPayData.setOutboxStatus(OutboxStatus.INIT);
+            paymentLedgerRecorder.record(
+                    kakaoPayData,
+                    previousStatus,
+                    PaymentStatus.PROCESSING,
+                    PaymentLedgerActorType.USER,
+                    String.valueOf(parameter.getUserId()),
+                    "Payment approval requested",
+                    "approve-start-" + kakaoPayData.getOrderId(),
+                    "source=kakao_pay_approve"
+            );
         }
 
         // 변경 감지로 저장되지만 명시적으로 호출
@@ -102,8 +116,19 @@ public class KakaoPayApproveTransactionService {
 
         // 3. 최종 상태 업데이트
         try {
+            PaymentStatus previousStatus = kakaoPayData.getStatus();
             kakaoPayData.setStatus(PaymentStatus.APPROVED);
             kakaoPayDataRepository.save(kakaoPayData);
+            paymentLedgerRecorder.record(
+                    kakaoPayData,
+                    previousStatus,
+                    PaymentStatus.APPROVED,
+                    PaymentLedgerActorType.SYSTEM,
+                    "kakao-pay-worker",
+                    "Payment approved by PG response",
+                    "approve-complete-" + kakaoPayData.getOrderId(),
+                    "source=kakao_pay_approve"
+            );
         } catch (Exception e) {
             log.error("상태 업데이트 실패 - orderId: {}", kakaoPayData.getOrderId(), e);
             throw new RuntimeException("STATUS_UPDATE", e);
@@ -127,8 +152,19 @@ public class KakaoPayApproveTransactionService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateStatus(Long id, PaymentStatus status) {
         kakaoPayDataRepository.findById(id).ifPresent(data -> {
+            PaymentStatus previousStatus = data.getStatus();
             data.setStatus(status);
             kakaoPayDataRepository.save(data);
+            paymentLedgerRecorder.record(
+                    data,
+                    previousStatus,
+                    status,
+                    PaymentLedgerActorType.SYSTEM,
+                    "payment-status-updater",
+                    "Payment status updated by approval flow",
+                    "status-update-" + data.getOrderId() + "-" + status,
+                    "source=kakao_pay_approve"
+            );
         });
     }
 }

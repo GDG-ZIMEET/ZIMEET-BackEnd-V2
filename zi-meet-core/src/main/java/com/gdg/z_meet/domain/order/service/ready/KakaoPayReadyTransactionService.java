@@ -4,7 +4,10 @@ import com.gdg.z_meet.domain.meeting.repository.UserTeamRepository;
 import com.gdg.z_meet.domain.order.converter.KaKaoPayReadyConverter;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayReadyDTO;
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
+import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
 import com.gdg.z_meet.domain.order.entity.enums.ProductType;
+import com.gdg.z_meet.domain.order.ledger.PaymentLedgerActorType;
+import com.gdg.z_meet.domain.order.ledger.PaymentLedgerRecorder;
 import com.gdg.z_meet.domain.order.repository.KakaoPayDataRepository;
 import com.gdg.z_meet.domain.user.entity.User;
 import com.gdg.z_meet.domain.user.repository.UserRepository;
@@ -24,6 +27,7 @@ public class KakaoPayReadyTransactionService {
     private final UserRepository userRepository;
     private final UserTeamRepository userTeamRepository;
     private final KakaoPayDataRepository kakaoPayDataRepository;
+    private final PaymentLedgerRecorder paymentLedgerRecorder;
 
     /**
      * 주문자 검증 및 조회
@@ -51,6 +55,16 @@ public class KakaoPayReadyTransactionService {
         KakaoPayData kaKaoPayData = KaKaoPayReadyConverter.toKakaoPayData(
                 kakaoApiResponse, parameter, orderId, buyer);
         kakaoPayDataRepository.save(kaKaoPayData);
+        paymentLedgerRecorder.record(
+                kaKaoPayData,
+                null,
+                PaymentStatus.PREPARED,
+                PaymentLedgerActorType.USER,
+                String.valueOf(buyer.getId()),
+                "Payment ready data created",
+                "ready-" + orderId,
+                "source=kakao_pay_ready"
+        );
         log.debug("결제 준비 데이터 저장 완료 - orderId: {}", orderId);
     }
 

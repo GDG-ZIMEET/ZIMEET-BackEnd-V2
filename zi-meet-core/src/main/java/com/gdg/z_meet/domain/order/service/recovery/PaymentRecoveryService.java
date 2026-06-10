@@ -2,6 +2,8 @@ package com.gdg.z_meet.domain.order.service.recovery;
 
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
+import com.gdg.z_meet.domain.order.ledger.PaymentLedgerActorType;
+import com.gdg.z_meet.domain.order.ledger.PaymentLedgerRecorder;
 import com.gdg.z_meet.domain.order.repository.KakaoPayDataRepository;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
@@ -18,6 +20,7 @@ public class PaymentRecoveryService {
 
     private final KakaoPayDataRepository kakaoPayDataRepository;
     private final com.gdg.z_meet.domain.order.service.cancel.KakaoPayCancelService kakaoPayCancelService;
+    private final PaymentLedgerRecorder paymentLedgerRecorder;
 
     private static final int MAX_RETRY_COUNT = 3;
 
@@ -79,7 +82,18 @@ public class PaymentRecoveryService {
                 // 결제 데이터를 UNKNOWN 상태로 변경 (사용자 확인 필요)
                 if (data.getStatus() != PaymentStatus.CANCELLED &&
                         data.getStatus() != PaymentStatus.FAILED) {
+                    PaymentStatus previousStatus = data.getStatus();
                     data.setStatus(PaymentStatus.UNKNOWN);
+                    paymentLedgerRecorder.record(
+                            data,
+                            previousStatus,
+                            PaymentStatus.UNKNOWN,
+                            PaymentLedgerActorType.BATCH,
+                            "payment-recovery",
+                            "Payment recovery retry exhausted",
+                            "recovery-unknown-" + data.getOrderId(),
+                            "source=payment_recovery"
+                    );
                     log.warn("보상 처리 최종 실패로 결제 상태를 UNKNOWN으로 변경 - orderId: {}", data.getOrderId());
                 }
 

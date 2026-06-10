@@ -4,6 +4,8 @@ import com.gdg.z_meet.domain.order.client.KaKaoPayApiClient;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayApproveDTO;
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
+import com.gdg.z_meet.domain.order.ledger.PaymentLedgerActorType;
+import com.gdg.z_meet.domain.order.ledger.PaymentLedgerRecorder;
 import com.gdg.z_meet.domain.order.repository.KakaoPayDataRepository;
 import com.gdg.z_meet.domain.order.service.approve.KakaoPayApproveTransactionService;
 import com.gdg.z_meet.domain.order.service.cancel.KakaoPayCancelService;
@@ -24,6 +26,7 @@ public class PaymentSyncService {
     private final KakaoPayDataRepository kakaoPayDataRepository;
     private final KakaoPayApproveTransactionService approveTransactionService;
     private final KakaoPayCancelService kakaoPayCancelService;
+    private final PaymentLedgerRecorder paymentLedgerRecorder;
 
     /**
      * 외부 PG사와 상태를 동기화하여 결제 상태를 확정함
@@ -81,9 +84,20 @@ public class PaymentSyncService {
                 case "PART_CANCEL_PAYMENT":
                 case "FAIL_PAYMENT":
                     log.info("결제 취소/실패 확인됨. 상태 업데이트 - orderId: {}, pgStatus: {}", orderId, pgStatus);
-                    kakaoPayData.setStatus(
-                            pgStatus.contains("CANCEL") ? PaymentStatus.CANCELLED : PaymentStatus.FAILED);
+                    PaymentStatus previousStatus = kakaoPayData.getStatus();
+                    PaymentStatus nextStatus = pgStatus.contains("CANCEL") ? PaymentStatus.CANCELLED : PaymentStatus.FAILED;
+                    kakaoPayData.setStatus(nextStatus);
                     kakaoPayDataRepository.save(kakaoPayData);
+                    paymentLedgerRecorder.record(
+                            kakaoPayData,
+                            previousStatus,
+                            nextStatus,
+                            PaymentLedgerActorType.BATCH,
+                            "payment-sync",
+                            "Payment status synchronized from PG status: " + pgStatus,
+                            "sync-" + orderId + "-" + nextStatus,
+                            "source=kakao_pay_sync"
+                    );
                     return true;
 
                 default:
@@ -91,8 +105,19 @@ public class PaymentSyncService {
                     // 30분 이상 경과한 데이터는 최종 실패로 처리 (Alarm 대용)
                     if (kakaoPayData.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(30))) {
                         log.error("[ALARM] 30분이 지난 UNKNOWN 결제 발견. 최종 실패 처리 - orderId: {}", orderId);
+                        PaymentStatus expiredPreviousStatus = kakaoPayData.getStatus();
                         kakaoPayData.setStatus(PaymentStatus.FAILED);
                         kakaoPayDataRepository.save(kakaoPayData);
+                        paymentLedgerRecorder.record(
+                                kakaoPayData,
+                                expiredPreviousStatus,
+                                PaymentStatus.FAILED,
+                                PaymentLedgerActorType.BATCH,
+                                "payment-sync",
+                                "Payment failed after unresolved PG status: " + pgStatus,
+                                "sync-expired-" + orderId,
+                                "source=kakao_pay_sync"
+                        );
                     }
                     return false;
             }

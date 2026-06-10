@@ -80,10 +80,22 @@ test-scripts/
 /*.pcap
 /*.sql
 
-# Admin dashboard & data initializer (local dev only)
-zi-meet-application/src/main/java/com/gdg/z_meet/domain/settlement/controller/AdminViewController.java
+# Portfolio/admin artifacts and local mock data
+zi-meet-application/
+zi-meet-core/src/main/java/com/gdg/z_meet/domain/festival/
+zi-meet-core/src/main/java/com/gdg/z_meet/domain/replay/
+zi-meet-core/src/main/java/com/gdg/z_meet/domain/order/ledger/PaymentLedgerAdminController.java
+zi-meet-core/src/main/java/com/gdg/z_meet/domain/order/ledger/controller/
+zi-meet-core/src/main/java/com/gdg/z_meet/domain/settlement/controller/AdminViewController.java
+zi-meet-core/src/main/java/com/gdg/z_meet/global/monitoring/InFlightMetricsFilter.java
+zi-meet-core/src/main/java/com/gdg/z_meet/global/monitoring/PaymentMetrics.java
+zi-meet-core/src/main/resources/templates/
+zi-meet-core/src/test/java/com/gdg/z_meet/domain/order/ledger/
 zi-meet-application/src/main/java/com/gdg/z_meet/global/init/
-zi-meet-application/src/main/resources/templates/
+zi-meet-core/src/main/resources/application-local.yml
+monitoring/grafana/provisioning/dashboards/zimeet-*.json
+loki/
+.claude/worktrees/
 stomp-vuln-test.html
 .claude/launch.json
 
