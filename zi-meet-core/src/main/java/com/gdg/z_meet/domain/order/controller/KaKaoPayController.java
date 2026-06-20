@@ -15,14 +15,18 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/kakao-pay")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 @Tag(name = "KaKaoPay", description = "카카오페이 결제 API")
 public class KaKaoPayController {
 
@@ -37,7 +41,7 @@ public class KaKaoPayController {
     public Response<KaKaoPayReadyDTO.Response> ready(
             @AuthUser Long userId,
             @Valid @RequestBody KaKaoPayReadyDTO.Request request,
-            @Parameter(description = "멱등성 키", example = "550e8400-e29b-41d4-a716-446655440000") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+            @Parameter(description = "멱등성 키", example = "550e8400-e29b-41d4-a716-446655440000") @NotBlank @RequestHeader("Idempotency-Key") String idempotencyKey) {
 
         KaKaoPayReadyDTO.Parameter parameter = KaKaoPayReadyConverter.toParameter(userId, request);
         KaKaoPayReadyDTO.Response response = kaKaoPayReadyService.ready(parameter, idempotencyKey);
@@ -49,7 +53,7 @@ public class KaKaoPayController {
     public Response<KaKaoPayApproveDTO.Response> approve(
             @AuthUser Long userId,
             @Valid @RequestBody KaKaoPayApproveDTO.Request request,
-            @Parameter(description = "멱등성 키", example = "550e8400-e29b-41d4-a716-446655440000") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+            @Parameter(description = "멱등성 키", example = "550e8400-e29b-41d4-a716-446655440000") @NotBlank @RequestHeader("Idempotency-Key") String idempotencyKey) {
 
         KaKaoPayApproveDTO.Parameter parameter = KaKaoPayApproveConverter.toParameter(userId, request);
         KaKaoPayApproveDTO.Response response = kaKaoPayApproveService.approve(parameter, idempotencyKey);
@@ -61,26 +65,30 @@ public class KaKaoPayController {
     public Response<KaKaoPayCancelDTO.Response> cancel(
             @AuthUser Long userId,
             @Valid @RequestBody KaKaoPayCancelDTO.Request request,
-            @Parameter(description = "멱등성 키", example = "550e8400-e29b-41d4-a716-446655440000") @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+            @Parameter(description = "멱등성 키", example = "550e8400-e29b-41d4-a716-446655440000") @NotBlank @RequestHeader("Idempotency-Key") String idempotencyKey) {
 
         KaKaoPayCancelDTO.Parameter parameter = KaKaoPayCancelConverter.toParameter(userId, request);
-        KaKaoPayCancelDTO.Response response = kaKaoPayCancelService.cancel(parameter, userId);
+        KaKaoPayCancelDTO.Response response = kaKaoPayCancelService.cancel(parameter, userId, idempotencyKey);
         return Response.ok(response);
     }
 
     @Operation(summary = "결제 결과 Webhook (통지)", description = "카카오페이 서버에서 결제 결과를 전송하는 웹훅 엔드포인트입니다.")
     @PostMapping("/callback")
-    public String callback(@RequestBody com.gdg.z_meet.domain.order.dto.KakaoPayWebhookDTO webhookData) {
+    public ResponseEntity<String> callback(@RequestBody com.gdg.z_meet.domain.order.dto.KakaoPayWebhookDTO webhookData) {
         log.info("카카오페이 Webhook 수신 - orderId: {}, status: {}",
                 webhookData.getPartner_order_id(), webhookData.getStatus());
 
         try {
-            paymentSyncService.syncPaymentStatus(webhookData.getPartner_order_id());
+            boolean synchronizedPayment = paymentSyncService.syncPaymentStatus(webhookData.getPartner_order_id());
+            if (!synchronizedPayment) {
+                return ResponseEntity.status(503).body("RETRY");
+            }
         } catch (Exception e) {
             log.error("Webhook 처리 중 에러 발생 - orderId: {}", webhookData.getPartner_order_id(), e);
+            return ResponseEntity.status(503).body("RETRY");
         }
 
         // 카카오페이 가이드에 따라 성공 응답 반환 (보통 빈 문자열 혹은 OK)
-        return "OK";
+        return ResponseEntity.ok("OK");
     }
 }

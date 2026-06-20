@@ -40,7 +40,7 @@ public class PaymentRecoveryScheduler {
 
         // 각 task를 개별 트랜잭션으로 처리
         for (KakaoPayData task : tasks) {
-            paymentRecoveryService.processRecovery(task);
+            paymentRecoveryService.processRecovery(task.getId());
         }
     }
 }

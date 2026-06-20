@@ -1,7 +1,6 @@
 package com.gdg.z_meet.domain.order.service.ready;
 
 import com.gdg.z_meet.domain.meeting.repository.UserTeamRepository;
-import com.gdg.z_meet.domain.order.converter.KaKaoPayReadyConverter;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayReadyDTO;
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
@@ -44,28 +43,54 @@ public class KakaoPayReadyTransactionService {
         return buyer;
     }
 
-    /**
-     * 결제 준비 데이터 저장
-     */
+    /** 외부 PG 호출 전에 주문과 멱등 키를 먼저 영속화한다. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void saveReadyData(KaKaoPayReadyDTO.KakaoApiResponse kakaoApiResponse,
-            KaKaoPayReadyDTO.Parameter parameter,
-            String orderId,
-            User buyer) {
-        KakaoPayData kaKaoPayData = KaKaoPayReadyConverter.toKakaoPayData(
-                kakaoApiResponse, parameter, orderId, buyer);
-        kakaoPayDataRepository.save(kaKaoPayData);
+    public KakaoPayData reserveReadyData(KaKaoPayReadyDTO.Parameter parameter, String orderId,
+                                         User buyer, String readyIdempotencyKey,
+                                         String requestFingerprint) {
+        if (readyIdempotencyKey != null) {
+            var existing = kakaoPayDataRepository.findByReadyIdempotencyKey(readyIdempotencyKey);
+            if (existing.isPresent()) {
+                if (!java.util.Objects.equals(existing.get().getReadyRequestFingerprint(), requestFingerprint)) {
+                    throw new BusinessException(Code.IDEMPOTENCY_PAYLOAD_MISMATCH);
+                }
+                return existing.get();
+            }
+        }
+
+        return kakaoPayDataRepository.save(KakaoPayData.builder()
+                .orderId(orderId)
+                .readyIdempotencyKey(readyIdempotencyKey)
+                .readyRequestFingerprint(requestFingerprint)
+                .status(PaymentStatus.PREPARED)
+                .productType(ProductType.valueOf(parameter.getProductType()))
+                .totalPrice(parameter.getTotalPrice())
+                .buyer(buyer)
+                .build());
+    }
+
+    /** PG Ready 응답과 PREPARED 원장을 같은 트랜잭션에 확정한다. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public KakaoPayData completeReadyData(Long paymentId, KaKaoPayReadyDTO.KakaoApiResponse kakaoApiResponse) {
+        KakaoPayData kaKaoPayData = kakaoPayDataRepository.findById(paymentId)
+                .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
+        if (kaKaoPayData.getTid() != null && kaKaoPayData.getReadyRedirectUrl() != null) {
+            return kaKaoPayData;
+        }
+        kaKaoPayData.setTid(kakaoApiResponse.getTid());
+        kaKaoPayData.setReadyRedirectUrl(kakaoApiResponse.getNext_redirect_pc_url());
         paymentLedgerRecorder.record(
                 kaKaoPayData,
                 null,
                 PaymentStatus.PREPARED,
                 PaymentLedgerActorType.USER,
-                String.valueOf(buyer.getId()),
+                String.valueOf(kaKaoPayData.getBuyer().getId()),
                 "Payment ready data created",
-                "ready-" + orderId,
+                "ready-" + kaKaoPayData.getOrderId(),
                 "source=kakao_pay_ready"
         );
-        log.debug("결제 준비 데이터 저장 완료 - orderId: {}", orderId);
+        log.debug("결제 준비 데이터 저장 완료 - orderId: {}", kaKaoPayData.getOrderId());
+        return kaKaoPayData;
     }
 
     private void validateProductType(KaKaoPayReadyDTO.Parameter parameter) {

@@ -14,6 +14,12 @@ public class PaymentLedgerAppendService {
 
     @Transactional
     public PaymentLedgerEntry append(PaymentLedgerAppendCommand command) {
+        if (command.requestId() != null) {
+            var existing = ledgerRepository.findByRequestId(command.requestId());
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
         var latest = ledgerRepository.findTopByOrderIdOrderByLedgerIdDesc(command.orderId()).orElse(null);
         var previousStatus = latest != null ? latest.getNextStatus() : null;
 

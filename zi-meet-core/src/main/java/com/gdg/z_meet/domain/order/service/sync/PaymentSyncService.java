@@ -9,6 +9,8 @@ import com.gdg.z_meet.domain.order.ledger.PaymentLedgerRecorder;
 import com.gdg.z_meet.domain.order.repository.KakaoPayDataRepository;
 import com.gdg.z_meet.domain.order.service.approve.KakaoPayApproveTransactionService;
 import com.gdg.z_meet.domain.order.service.cancel.KakaoPayCancelService;
+import com.gdg.z_meet.domain.order.service.locking.KakaoPayLockService;
+import com.gdg.z_meet.domain.order.service.recovery.PaymentRecoveryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,8 @@ public class PaymentSyncService {
     private final KakaoPayApproveTransactionService approveTransactionService;
     private final KakaoPayCancelService kakaoPayCancelService;
     private final PaymentLedgerRecorder paymentLedgerRecorder;
+    private final KakaoPayLockService lockService;
+    private final PaymentRecoveryService recoveryService;
 
     /**
      * 외부 PG사와 상태를 동기화하여 결제 상태를 확정함
@@ -36,6 +40,10 @@ public class PaymentSyncService {
      */
     @Transactional
     public boolean syncPaymentStatus(String orderId) {
+        return lockService.executeWithLock(orderId, () -> syncPaymentStatusLocked(orderId));
+    }
+
+    private boolean syncPaymentStatusLocked(String orderId) {
         log.info("결제 상태 동기화 시작 - orderId: {}", orderId);
 
         KakaoPayData kakaoPayData = kakaoPayDataRepository.findByOrderId(orderId)
@@ -77,7 +85,13 @@ public class PaymentSyncService {
                 case "READY":
                     // 5분 이상 READY 상태라면 결제가 중단된 것으로 간주 -> 강제 취소 및 정리
                     log.warn("READY 상태 낙오 데이터 발견. 강제 정리 시작 - orderId: {}", orderId);
-                    kakaoPayCancelService.compensatePayment(kakaoPayData, "GHOST_READY_PAYMENT_CLEANUP");
+                    String compensationResult = kakaoPayCancelService.compensatePaymentUnderExistingLock(
+                            kakaoPayData, "GHOST_READY_PAYMENT_CLEANUP");
+                    if ("RETRY".equals(compensationResult)) {
+                        recoveryService.scheduleRecovery(
+                                kakaoPayData.getOrderId(), kakaoPayData.getTid(), "GHOST_READY_PAYMENT_CLEANUP");
+                        return false;
+                    }
                     return true;
 
                 case "CANCEL_PAYMENT":
@@ -102,22 +116,10 @@ public class PaymentSyncService {
 
                 default:
                     log.warn("알 수 없는 PG 상태 - orderId: {}, pgStatus: {}", orderId, pgStatus);
-                    // 30분 이상 경과한 데이터는 최종 실패로 처리 (Alarm 대용)
+                    // PG 상태를 확인하지 못한 타임아웃 건은 FAILED로 단정하지 않고 수동 정합성 대상으로 남긴다.
                     if (kakaoPayData.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(30))) {
-                        log.error("[ALARM] 30분이 지난 UNKNOWN 결제 발견. 최종 실패 처리 - orderId: {}", orderId);
-                        PaymentStatus expiredPreviousStatus = kakaoPayData.getStatus();
-                        kakaoPayData.setStatus(PaymentStatus.FAILED);
-                        kakaoPayDataRepository.save(kakaoPayData);
-                        paymentLedgerRecorder.record(
-                                kakaoPayData,
-                                expiredPreviousStatus,
-                                PaymentStatus.FAILED,
-                                PaymentLedgerActorType.BATCH,
-                                "payment-sync",
-                                "Payment failed after unresolved PG status: " + pgStatus,
-                                "sync-expired-" + orderId,
-                                "source=kakao_pay_sync"
-                        );
+                        log.error("[ALARM] 30분이 지난 UNKNOWN 결제 발견. UNKNOWN 유지 및 수동 확인 필요 - orderId: {}",
+                                orderId);
                     }
                     return false;
             }

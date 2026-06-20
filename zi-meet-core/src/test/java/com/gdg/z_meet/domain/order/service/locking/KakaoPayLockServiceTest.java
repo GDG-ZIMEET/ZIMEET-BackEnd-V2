@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.DatabaseMetaData;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,12 +39,16 @@ class KakaoPayLockServiceTest {
     private PreparedStatement preparedStatement;
     @Mock
     private ResultSet resultSet;
+    @Mock
+    private DatabaseMetaData databaseMetaData;
 
     private KakaoPayLockService kakaoPayLockService;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws SQLException {
         kakaoPayLockService = new KakaoPayLockService(lockDataSource, lockMonitoringService);
+        lenient().when(connection.getMetaData()).thenReturn(databaseMetaData);
+        lenient().when(databaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
     }
 
     @Test

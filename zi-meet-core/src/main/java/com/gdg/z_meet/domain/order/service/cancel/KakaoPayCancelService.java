@@ -8,6 +8,8 @@ import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
+import com.gdg.z_meet.domain.order.service.idempotency.KakaoPayIdempotencyService;
+import com.gdg.z_meet.domain.order.service.locking.KakaoPayLockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,8 @@ public class KakaoPayCancelService {
 
     private final KaKaoPayApiClient kaKaoPayApiClient;
     private final KakaoPayCancelTransactionService transactionService;
+    private final KakaoPayLockService lockService;
+    private final KakaoPayIdempotencyService idempotencyService;
 
     /**
      * 결제 취소 처리
@@ -29,7 +33,36 @@ public class KakaoPayCancelService {
      * @param userId    사용자 ID
      * @return 취소 응답
      */
-    public KaKaoPayCancelDTO.Response cancel(KaKaoPayCancelDTO.Parameter parameter, Long userId) {
+    public KaKaoPayCancelDTO.Response cancel(KaKaoPayCancelDTO.Parameter parameter, Long userId,
+                                             String idempotencyKey) {
+        String key = (idempotencyKey == null || idempotencyKey.isBlank())
+                ? null
+                : userId + ":CANCEL:" + idempotencyKey;
+        String payload = parameter.getOrderId() + ":" + String.valueOf(parameter.getCancelReason());
+        var validation = idempotencyService.validate(key, payload);
+        if (validation.isCached()) {
+            return (KaKaoPayCancelDTO.Response) validation.getCachedResponse();
+        }
+
+        try {
+            KaKaoPayCancelDTO.Response response = lockService.executeWithLock(
+                    parameter.getOrderId(), () -> cancelLocked(parameter, userId));
+            idempotencyService.cacheResponse(key, response);
+            return response;
+        } finally {
+            idempotencyService.unmarkAsProcessing(key, validation.getProcessingToken());
+        }
+    }
+
+    private KaKaoPayCancelDTO.Response cancelLocked(KaKaoPayCancelDTO.Parameter parameter, Long userId) {
+        KakaoPayData current = transactionService.findPaymentData(parameter.getOrderId());
+        if (!current.getBuyer().getId().equals(userId)) {
+            throw new BusinessException(Code.KAKAO_API_INVALID_BUYER);
+        }
+        if (current.getStatus() == PaymentStatus.CANCELLED) {
+            return cancelledResponse(current.getOrderId(), null);
+        }
+
         // 1. 결제 정보 조회 및 검증 (Tx 1)
         KakaoPayData kakaoPayData = transactionService.validateAndGetPaymentData(parameter.getOrderId(), userId);
 
@@ -37,9 +70,14 @@ public class KakaoPayCancelService {
         parameter = KaKaoPayCancelConverter.toParameter(kakaoPayData, parameter.getCancelReason());
 
         // 2. 카카오페이 취소 API 호출 (No Tx)
-        KaKaoPayCancelDTO.KakaoApiResponse kakaoApiResponse = kaKaoPayApiClient
-                .requestPaymentCancel(parameter)
-                .orElseThrow(() -> new BusinessException(Code.INVALID_KAKAO_API_RESPONSE));
+        Optional<KaKaoPayCancelDTO.KakaoApiResponse> cancelResult;
+        try {
+            cancelResult = kaKaoPayApiClient.requestPaymentCancel(parameter);
+        } catch (RuntimeException e) {
+            cancelResult = Optional.empty();
+        }
+        KaKaoPayCancelDTO.KakaoApiResponse kakaoApiResponse = cancelResult
+                .orElseGet(() -> resolveUncertainCancel(kakaoPayData));
 
         log.debug("카카오페이 결제 취소 성공 - orderId: {}", parameter.getOrderId());
 
@@ -47,6 +85,26 @@ public class KakaoPayCancelService {
         transactionService.completeCancel(kakaoPayData.getId());
 
         return KaKaoPayCancelConverter.toResponse(kakaoApiResponse, parameter.getOrderId());
+    }
+
+    private KaKaoPayCancelDTO.KakaoApiResponse resolveUncertainCancel(KakaoPayData data) {
+        Optional<KaKaoPayApproveDTO.KaKaoApiResponse> inquiry = kaKaoPayApiClient.inquirePaymentStatus(data.getTid());
+        if (inquiry.isPresent() && ("CANCEL_PAYMENT".equals(inquiry.get().getStatus()) ||
+                "PART_CANCEL_PAYMENT".equals(inquiry.get().getStatus()))) {
+            return KaKaoPayCancelDTO.KakaoApiResponse.builder()
+                    .status(inquiry.get().getStatus())
+                    .build();
+        }
+        transactionService.scheduleCancelRecovery(data.getId(), "CANCEL_TIMEOUT_UNKNOWN");
+        throw new BusinessException(Code.PAYMENT_UNKNOWN_STATUS_RETRY);
+    }
+
+    private KaKaoPayCancelDTO.Response cancelledResponse(String orderId, String cancelledAt) {
+        return KaKaoPayCancelDTO.Response.builder()
+                .orderId(orderId)
+                .canceledAt(cancelledAt)
+                .status("CANCEL_PAYMENT")
+                .build();
     }
 
     /**
@@ -66,6 +124,17 @@ public class KakaoPayCancelService {
      * 2. 상태에 따른 후속 조치 (성공 시 DB 보정, 실패/미결제 시 취소 또는 종료)
      */
     public String compensatePayment(KakaoPayData kakaoPayData, String cancelReason) {
+        return lockService.executeWithLock(kakaoPayData.getOrderId(),
+                () -> compensatePaymentLocked(kakaoPayData.getId(), cancelReason));
+    }
+
+    /** 동일 orderId 락을 이미 보유한 Sync 흐름에서만 사용한다. */
+    public String compensatePaymentUnderExistingLock(KakaoPayData kakaoPayData, String cancelReason) {
+        return compensatePaymentLocked(kakaoPayData.getId(), cancelReason);
+    }
+
+    private String compensatePaymentLocked(Long paymentId, String cancelReason) {
+        KakaoPayData kakaoPayData = transactionService.findPaymentDataById(paymentId);
         log.warn("보상 트랜잭션 수행 - orderId: {}, 사유: {}", kakaoPayData.getOrderId(), cancelReason);
 
         try {

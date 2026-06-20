@@ -85,8 +85,8 @@ kakao:
     approval-url: ${KAKAO_PAY_APPROVAL_URL:http://localhost:3000/purchase/approve}
     cancel-url: ${KAKAO_PAY_CANCEL_URL:http://localhost:3000/purchase/cancel}
     fail-url: ${KAKAO_PAY_FAIL_URL:http://localhost:3000/purchase/fail}
-    connection-timeout: 5000  # Connection Timeout: 5초
-    read-timeout: 8000        # Read Timeout: 8초
+    connection-timeout: 3000  # 빠른 연결 실패 후 상태조회/복구 흐름으로 전환
+    read-timeout: 6000        # 쓰기 명령 타임아웃은 실패가 아닌 UNKNOWN으로 처리
 
 firebase:
   admin-sdk: ${FIREBASE_ADMIN_SDK_PATH}
@@ -119,24 +119,6 @@ resilience4j:
         slowCallRateThreshold: 50
         waitDurationInOpenState: 30s
         permittedNumberOfCallsInHalfOpenState: 3
-
-
-
-
-  retry:
-    configs:
-      default:
-        maxAttempts: 2
-        waitDuration: 500ms
-        retryExceptions:
-          - org.springframework.web.client.ResourceAccessException
-          - java.net.SocketTimeoutException
-    instances:
-      kakaoPayApi:
-        baseConfig: default
-        maxAttempts: 2
-        waitDuration: 1000ms
-
   ratelimiter:
     instances:
       kakaoPayApi:

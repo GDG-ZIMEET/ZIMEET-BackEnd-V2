@@ -4,7 +4,6 @@ import com.gdg.z_meet.domain.order.converter.KaKaoPayApproveConverter;
 import com.gdg.z_meet.domain.order.dto.KaKaoPayApproveDTO;
 import com.gdg.z_meet.domain.order.entity.ItemPurchase;
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
-import com.gdg.z_meet.domain.order.entity.enums.OutboxStatus;
 import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
 import com.gdg.z_meet.domain.order.entity.enums.ProductType;
 import com.gdg.z_meet.domain.order.ledger.PaymentLedgerActorType;
@@ -39,26 +38,19 @@ public class KakaoPayApproveTransactionService {
         KakaoPayData kakaoPayData = kakaoPayDataRepository.findByOrderId(parameter.getOrderId())
                 .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
 
-        // 결제 상태 검증
-        if (kakaoPayData.getStatus() == PaymentStatus.APPROVED) {
-            log.warn("이미 승인된 결제입니다 - orderId: {}", parameter.getOrderId());
-            throw new BusinessException(Code.INVALID_KAKAO_API_RESPONSE);
-        }
-
         // 주문자 검증
         if (!kakaoPayData.getBuyer().getId().equals(parameter.getUserId())) {
             throw new BusinessException(Code.KAKAO_API_INVALID_BUYER);
         }
 
-        // 상태 변경 (PREPARED -> PROCESSING) 및 아웃박스 등록
-        if (kakaoPayData.getStatus() == PaymentStatus.PREPARED) {
-            PaymentStatus previousStatus = kakaoPayData.getStatus();
-            kakaoPayData.setStatus(PaymentStatus.PROCESSING);
-            kakaoPayData.setPgToken(parameter.getPgToken());
-            kakaoPayData.setOutboxStatus(OutboxStatus.INIT);
+        // PREPARED -> PROCESSING 전이는 조건부 UPDATE로 한 요청만 선점한다.
+        if (kakaoPayData.getStatus() == PaymentStatus.PREPARED &&
+                kakaoPayDataRepository.claimApproval(parameter.getOrderId(), parameter.getPgToken()) == 1) {
+            kakaoPayData = kakaoPayDataRepository.findByOrderId(parameter.getOrderId())
+                    .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
             paymentLedgerRecorder.record(
                     kakaoPayData,
-                    previousStatus,
+                    PaymentStatus.PREPARED,
                     PaymentStatus.PROCESSING,
                     PaymentLedgerActorType.USER,
                     String.valueOf(parameter.getUserId()),
@@ -68,8 +60,8 @@ public class KakaoPayApproveTransactionService {
             );
         }
 
-        // 변경 감지로 저장되지만 명시적으로 호출
-        return kakaoPayDataRepository.save(kakaoPayData);
+        return kakaoPayDataRepository.findByOrderId(parameter.getOrderId())
+                .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
     }
 
     /**
@@ -83,6 +75,33 @@ public class KakaoPayApproveTransactionService {
 
         KakaoPayData kakaoPayData = kakaoPayDataRepository.findById(kakaoPayDataId)
                 .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
+
+        if (kakaoPayData.getStatus() == PaymentStatus.APPROVED) {
+            return KaKaoPayApproveDTO.Response.builder()
+                    .orderId(kakaoPayData.getOrderId())
+                    .approvedAt(kakaoPayData.getUpdatedAt().toString())
+                    .build();
+        }
+        if (kakaoPayData.getStatus() == PaymentStatus.CANCELLED ||
+                kakaoPayData.getStatus() == PaymentStatus.FAILED) {
+            throw new BusinessException(Code.INVALID_KAKAO_API_RESPONSE);
+        }
+
+        if (itemPurchaseRepository.existsByOrderId(kakaoPayData.getOrderId())) {
+            PaymentStatus previousStatus = kakaoPayData.getStatus();
+            kakaoPayData.setStatus(PaymentStatus.APPROVED);
+            kakaoPayDataRepository.save(kakaoPayData);
+            paymentLedgerRecorder.record(
+                    kakaoPayData, previousStatus, PaymentStatus.APPROVED,
+                    PaymentLedgerActorType.SYSTEM, "kakao-pay-reconciliation",
+                    "Payment reconciled from existing purchase",
+                    "approve-complete-" + kakaoPayData.getOrderId(),
+                    "source=kakao_pay_reconciliation");
+            return KaKaoPayApproveDTO.Response.builder()
+                    .orderId(kakaoPayData.getOrderId())
+                    .approvedAt(kakaoPayData.getUpdatedAt().toString())
+                    .build();
+        }
 
         ProductType productType = kakaoPayData.getProductType();
         Long totalPrice = kakaoPayData.getTotalPrice();

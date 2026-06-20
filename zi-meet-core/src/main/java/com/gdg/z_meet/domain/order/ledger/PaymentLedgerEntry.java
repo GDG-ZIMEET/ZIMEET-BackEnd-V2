@@ -24,7 +24,8 @@ import java.time.LocalDateTime;
         indexes = {
                 @Index(name = "idx_payment_ledger_order_id", columnList = "order_id, ledger_id"),
                 @Index(name = "idx_payment_ledger_occurred_at", columnList = "occurred_at"),
-                @Index(name = "idx_payment_ledger_event_type", columnList = "event_type")
+                @Index(name = "idx_payment_ledger_event_type", columnList = "event_type"),
+                @Index(name = "uk_payment_ledger_request_id", columnList = "request_id", unique = true)
         }
 )
 @Getter

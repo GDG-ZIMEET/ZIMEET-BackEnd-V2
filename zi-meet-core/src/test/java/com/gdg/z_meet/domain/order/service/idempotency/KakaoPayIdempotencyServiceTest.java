@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 import java.time.Duration;
 
@@ -86,36 +87,32 @@ class KakaoPayIdempotencyServiceTest {
     @Test
     @DisplayName("처리 중 표시 해제 - 키 없으면 무시")
     void 처리_중_표시_해제_키_없으면_무시() {
-        // given
-        when(redisTemplate.hasKey(anyString())).thenReturn(false);
-
         // when
-        idempotencyService.unmarkAsProcessing(TEST_IDEMPOTENCY_KEY);
+        idempotencyService.unmarkAsProcessing(TEST_IDEMPOTENCY_KEY, null);
 
         // then
-        verify(redisTemplate, never()).delete(anyString());
+        verifyNoInteractions(redisTemplate);
     }
 
     @Test
     @DisplayName("처리 중 표시 해제 - 키 있으면 삭제")
     void 처리_중_표시_해제_키_있으면_삭제() {
         // given
-        when(redisTemplate.hasKey(anyString())).thenReturn(true);
-        when(redisTemplate.delete(anyString())).thenReturn(true);
+        when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any())).thenReturn(1L);
 
         // when
-        idempotencyService.unmarkAsProcessing(TEST_IDEMPOTENCY_KEY);
+        idempotencyService.unmarkAsProcessing(TEST_IDEMPOTENCY_KEY, "owner-token");
 
         // then
-        verify(redisTemplate).hasKey("processing:test-key-123");
-        verify(redisTemplate).delete("processing:test-key-123");
+        verify(redisTemplate).execute(any(DefaultRedisScript.class),
+                eq(java.util.List.of("processing:test-key-123")), eq("owner-token"));
     }
 
     @Test
     @DisplayName("처리 중 표시 해제 - null 키는 무시")
     void 처리_중_표시_해제_null_키_무시() {
         // when
-        idempotencyService.unmarkAsProcessing(null);
+        idempotencyService.unmarkAsProcessing(null, "owner-token");
 
         // then
         verifyNoInteractions(redisTemplate);
@@ -208,7 +205,10 @@ class KakaoPayIdempotencyServiceTest {
 
         // then
         assertThat(result.isProcessing()).isTrue();
-        verify(redisTemplate.opsForValue()).setIfAbsent(eq("processing:userId123:test-key-123"), eq("processing"), eq(Duration.ofMinutes(5)));
+        assertThat(result.getProcessingToken()).isNotBlank();
+        verify(redisTemplate.opsForValue()).setIfAbsent(
+                eq("processing:userId123:test-key-123"),
+                eq(result.getProcessingToken()), eq(Duration.ofMinutes(5)));
     }
 
     @Test
@@ -249,8 +249,7 @@ class KakaoPayIdempotencyServiceTest {
         assertThat(result1.isProcessing()).isTrue();
         assertThat(result2.isProcessing()).isTrue();
         // 서로 다른 키로 저장됨
-        verify(redisTemplate.opsForValue()).setIfAbsent(eq("processing:userId123:test-key-123"), any(), any());
-        verify(redisTemplate.opsForValue()).setIfAbsent(eq("processing:userId456:test-key-123"), any(), any());
+        verify(redisTemplate.opsForValue()).setIfAbsent(eq("processing:userId123:test-key-123"), anyString(), any());
+        verify(redisTemplate.opsForValue()).setIfAbsent(eq("processing:userId456:test-key-123"), anyString(), any());
     }
 }
-

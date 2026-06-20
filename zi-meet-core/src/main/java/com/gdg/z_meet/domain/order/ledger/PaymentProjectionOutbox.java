@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
         name = "payment_projection_outbox",
         indexes = {
                 @Index(name = "idx_payment_projection_outbox_status_id", columnList = "status, outbox_id"),
-                @Index(name = "idx_payment_projection_outbox_ledger", columnList = "ledger_id")
+                @Index(name = "uk_payment_projection_outbox_ledger", columnList = "ledger_id", unique = true)
         }
 )
 @Getter

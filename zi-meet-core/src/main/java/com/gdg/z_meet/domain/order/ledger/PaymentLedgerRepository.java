@@ -9,6 +9,8 @@ public interface PaymentLedgerRepository extends JpaRepository<PaymentLedgerEntr
 
     Optional<PaymentLedgerEntry> findTopByOrderIdOrderByLedgerIdDesc(String orderId);
 
+    Optional<PaymentLedgerEntry> findByRequestId(String requestId);
+
     boolean existsBySourcePaymentIdAndEventType(Long sourcePaymentId, PaymentLedgerEventType eventType);
 
     List<PaymentLedgerEntry> findByOrderIdOrderByLedgerIdAsc(String orderId);

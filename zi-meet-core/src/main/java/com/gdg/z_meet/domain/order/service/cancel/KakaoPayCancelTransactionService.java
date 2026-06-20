@@ -21,6 +21,18 @@ public class KakaoPayCancelTransactionService {
     private final KakaoPayDataRepository kakaoPayDataRepository;
     private final PaymentLedgerRecorder paymentLedgerRecorder;
 
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
+    public KakaoPayData findPaymentData(String orderId) {
+        return kakaoPayDataRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
+    }
+
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
+    public KakaoPayData findPaymentDataById(Long id) {
+        return kakaoPayDataRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
+    }
+
     /**
      * 결제 취소 전 데이터 조회 및 검증
      */
@@ -116,5 +128,13 @@ public class KakaoPayCancelTransactionService {
                 "cancel-status-" + kakaoPayData.getOrderId() + "-" + status,
                 "source=kakao_pay_cancel"
         );
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void scheduleCancelRecovery(Long kakaoPayDataId, String reason) {
+        KakaoPayData data = kakaoPayDataRepository.findById(kakaoPayDataId)
+                .orElseThrow(() -> new BusinessException(Code.PAYMENT_NOT_FOUND));
+        data.scheduleRecovery(reason);
+        kakaoPayDataRepository.save(data);
     }
 }

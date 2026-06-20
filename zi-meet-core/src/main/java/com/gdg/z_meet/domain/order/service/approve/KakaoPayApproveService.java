@@ -6,7 +6,7 @@ import com.gdg.z_meet.domain.order.entity.KakaoPayData;
 import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
 import com.gdg.z_meet.domain.order.service.locking.KakaoPayLockService;
 import com.gdg.z_meet.domain.order.service.recovery.PaymentRecoveryService;
-import com.gdg.z_meet.domain.order.service.sync.PaymentSyncService;
+import com.gdg.z_meet.domain.order.service.idempotency.KakaoPayIdempotencyService;
 import com.gdg.z_meet.global.exception.BusinessException;
 import com.gdg.z_meet.global.response.Code;
 import lombok.RequiredArgsConstructor;
@@ -24,24 +24,37 @@ public class KakaoPayApproveService {
     private final KakaoPayLockService kakaoPayLockService;
     private final KakaoPayApproveTransactionService transactionService;
     private final PaymentRecoveryService paymentRecoveryService;
-    private final PaymentSyncService paymentSyncService;
+    private final KakaoPayIdempotencyService idempotencyService;
 
     /**
      * MQ를 이용한 비동기 결제 승인 요청
      */
     public KaKaoPayApproveDTO.Response approve(KaKaoPayApproveDTO.Parameter parameter, String idempotencyKey) {
-        log.info("결제 승인 요청 MQ 적재 시작 - orderId: {}", parameter.getOrderId());
+        String key = (idempotencyKey == null || idempotencyKey.isBlank())
+                ? null
+                : parameter.getUserId() + ":APPROVE:" + idempotencyKey;
+        String payload = parameter.getOrderId() + ":" + parameter.getPgToken();
+        var validation = idempotencyService.validate(key, payload);
+        if (validation.isCached()) {
+            return (KaKaoPayApproveDTO.Response) validation.getCachedResponse();
+        }
 
-        // 1. 중복 처리 방어 및 상태 변경 (아웃박스 등록 포함)
-        transactionService.startPaymentProcessing(parameter);
+        try {
+            log.info("결제 승인 요청 MQ 적재 시작 - orderId: {}", parameter.getOrderId());
+            KakaoPayData payment = transactionService.startPaymentProcessing(parameter);
+            validateApprovalState(payment);
 
-        log.info("결제 승인 요청 아웃박스 적재 완료 - orderId: {}", parameter.getOrderId());
+            log.info("결제 승인 요청 아웃박스 적재 완료 - orderId: {}", parameter.getOrderId());
 
-        // 비동기 시점에는 정확한 승인 시각을 알 수 없으므로 현재 시간으로 가응답
-        return KaKaoPayApproveDTO.Response.builder()
-                .orderId(parameter.getOrderId())
-                .approvedAt(java.time.LocalDateTime.now().toString())
-                .build();
+            KaKaoPayApproveDTO.Response response = KaKaoPayApproveDTO.Response.builder()
+                    .orderId(parameter.getOrderId())
+                    .approvedAt(java.time.LocalDateTime.now().toString())
+                    .build();
+            idempotencyService.cacheResponse(key, response);
+            return response;
+        } finally {
+            idempotencyService.unmarkAsProcessing(key, validation.getProcessingToken());
+        }
     }
 
     /**
@@ -54,6 +67,14 @@ public class KakaoPayApproveService {
 
                 // 1. 결제 데이터 조회 및 최종 상태 확인 (이미 처리 중이거나 완료되었는지)
                 KakaoPayData kakaoPayData = transactionService.startPaymentProcessing(parameter);
+
+                if (kakaoPayData.getStatus() == PaymentStatus.APPROVED) {
+                    return KaKaoPayApproveDTO.Response.builder()
+                            .orderId(kakaoPayData.getOrderId())
+                            .approvedAt(kakaoPayData.getUpdatedAt().toString())
+                            .build();
+                }
+                validateApprovalState(kakaoPayData);
 
                 // 2. 외부 API 호출 (카카오페이 승인)
                 Optional<KaKaoPayApproveDTO.KaKaoApiResponse> kakaoApiResponseOpt;
@@ -96,6 +117,9 @@ public class KakaoPayApproveService {
             });
         } catch (BusinessException e) {
             log.error("워커 결제 승인 처리 실패 (비즈니스 예외) - orderId: {}, error: {}", parameter.getOrderId(), e.getMessage());
+            if (e.getCode() == Code.IDEMPOTENCY_CONFLICT) {
+                throw e;
+            }
             // 이미 UNKNOWN 처리가 된 경우는 중복 호출 방지
             handlePaymentFailure(parameter.getOrderId(), "워커 승인 실패: " + e.getMessage());
             throw e;
@@ -104,6 +128,17 @@ public class KakaoPayApproveService {
             handlePaymentFailure(parameter.getOrderId(), "워커 승인 실패: " + e.getMessage());
             throw e;
         }
+    }
+
+    private void validateApprovalState(KakaoPayData payment) {
+        if (payment.getStatus() == PaymentStatus.PROCESSING ||
+                payment.getStatus() == PaymentStatus.APPROVED) {
+            return;
+        }
+        if (payment.getStatus() == PaymentStatus.UNKNOWN) {
+            throw new BusinessException(Code.PAYMENT_UNKNOWN_STATUS_RETRY);
+        }
+        throw new BusinessException(Code.INVALID_KAKAO_API_RESPONSE);
     }
 
     /**

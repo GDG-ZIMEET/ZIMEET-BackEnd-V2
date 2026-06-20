@@ -30,6 +30,15 @@ public class KakaoPayData extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String orderId;
 
+    @Column(name = "ready_idempotency_key", length = 200, unique = true)
+    private String readyIdempotencyKey;
+
+    @Column(name = "ready_redirect_url", length = 500)
+    private String readyRedirectUrl;
+
+    @Column(name = "ready_request_fingerprint", length = 255)
+    private String readyRequestFingerprint;
+
     @Schema(description = "카카오페이 결제 고유 번호 (TID)", example = "T1234567890")
     private String tid;
 
@@ -121,6 +130,18 @@ public class KakaoPayData extends BaseEntity {
         return tid;
     }
 
+    public String getReadyIdempotencyKey() {
+        return readyIdempotencyKey;
+    }
+
+    public String getReadyRedirectUrl() {
+        return readyRedirectUrl;
+    }
+
+    public String getReadyRequestFingerprint() {
+        return readyRequestFingerprint;
+    }
+
     public PaymentStatus getStatus() {
         return status;
     }
@@ -152,6 +173,18 @@ public class KakaoPayData extends BaseEntity {
 
     public void setTid(String tid) {
         this.tid = tid;
+    }
+
+    public void setReadyIdempotencyKey(String readyIdempotencyKey) {
+        this.readyIdempotencyKey = readyIdempotencyKey;
+    }
+
+    public void setReadyRedirectUrl(String readyRedirectUrl) {
+        this.readyRedirectUrl = readyRedirectUrl;
+    }
+
+    public void setReadyRequestFingerprint(String readyRequestFingerprint) {
+        this.readyRequestFingerprint = readyRequestFingerprint;
     }
 
     public void setStatus(PaymentStatus status) {
@@ -279,6 +312,9 @@ public class KakaoPayData extends BaseEntity {
     }
 
     public void scheduleRecovery(String reason) {
+        if (this.recoveryStatus != null && this.recoveryStatus != RecoveryStatus.NONE) {
+            return;
+        }
         this.cancelReason = reason;
         this.recoveryStatus = RecoveryStatus.PENDING;
         this.recoveryRetryCount = 0;

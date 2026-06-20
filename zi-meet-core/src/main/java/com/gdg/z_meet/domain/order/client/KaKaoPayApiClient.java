@@ -101,7 +101,6 @@ public class KaKaoPayApiClient {
 
     // 카카오페이 결제 승인 API
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "kakaoPayApi", fallbackMethod = "approveApiFallback")
-    @io.github.resilience4j.retry.annotation.Retry(name = "kakaoPayApi")
     public Optional<KaKaoPayApproveDTO.KaKaoApiResponse> requestPaymentApprove(
             KaKaoPayApproveDTO.Parameter parameter, KakaoPayData kakaoPayData) {
 
@@ -188,7 +187,6 @@ public class KaKaoPayApiClient {
 
     // 카카오페이 결제 취소 API
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "kakaoPayApi", fallbackMethod = "cancelApiFallback")
-    @io.github.resilience4j.retry.annotation.Retry(name = "kakaoPayApi")
     public Optional<KaKaoPayCancelDTO.KakaoApiResponse> requestPaymentCancel(KaKaoPayCancelDTO.Parameter parameter) {
 
         try {

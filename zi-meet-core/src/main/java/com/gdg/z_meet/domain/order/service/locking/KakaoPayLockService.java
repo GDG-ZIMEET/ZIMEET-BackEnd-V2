@@ -39,7 +39,7 @@ public class KakaoPayLockService {
         this.kakaoPaylockMonitoringService = kakaoPaylockMonitoringService;
     }
 
-    private static final String LOCK_PREFIX = "LOCK_KAKAO_PAY_APPROVE_";
+    private static final String LOCK_PREFIX = "LOCK_KAKAO_PAY_ORDER_";
     private static final String GET_LOCK_QUERY = "SELECT GET_LOCK(?, ?)";
     private static final String RELEASE_LOCK_QUERY = "SELECT RELEASE_LOCK(?)";
     private static final int DEFAULT_LOCK_TIMEOUT_SECONDS = 3;
