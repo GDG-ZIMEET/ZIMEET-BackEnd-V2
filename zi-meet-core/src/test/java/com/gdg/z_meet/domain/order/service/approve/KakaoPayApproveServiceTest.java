@@ -27,13 +27,14 @@ class KakaoPayApproveServiceTest {
     @Mock KakaoPayApproveTransactionService transactionService;
     @Mock PaymentRecoveryService recoveryService;
     @Mock KakaoPayIdempotencyService idempotencyService;
+    @Mock PaymentApprovalUncertaintyResolver uncertaintyResolver;
 
     private KakaoPayApproveService service;
 
     @BeforeEach
     void setUp() {
         service = new KakaoPayApproveService(
-                apiClient, lockService, transactionService, recoveryService, idempotencyService);
+                apiClient, lockService, transactionService, recoveryService, idempotencyService, uncertaintyResolver);
     }
 
     @Test

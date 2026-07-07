@@ -2,6 +2,7 @@ package com.gdg.z_meet.domain.order.ledger;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -12,7 +13,7 @@ public class PaymentLedgerAppendService {
     private final PaymentProjectionOutboxRepository outboxRepository;
     private final PaymentLedgerTransitionValidator transitionValidator;
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public PaymentLedgerEntry append(PaymentLedgerAppendCommand command) {
         if (command.requestId() != null) {
             var existing = ledgerRepository.findByRequestId(command.requestId());
@@ -20,7 +21,7 @@ public class PaymentLedgerAppendService {
                 return existing.get();
             }
         }
-        var latest = ledgerRepository.findTopByOrderIdOrderByLedgerIdDesc(command.orderId()).orElse(null);
+        var latest = ledgerRepository.findFirstByOrderIdOrderByLedgerIdDesc(command.orderId()).orElse(null);
         var previousStatus = latest != null ? latest.getNextStatus() : null;
 
         transitionValidator.validate(previousStatus, command.nextStatus(), command.eventType());

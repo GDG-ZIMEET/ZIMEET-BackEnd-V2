@@ -25,6 +25,7 @@ public class KakaoPayApproveService {
     private final KakaoPayApproveTransactionService transactionService;
     private final PaymentRecoveryService paymentRecoveryService;
     private final KakaoPayIdempotencyService idempotencyService;
+    private final PaymentApprovalUncertaintyResolver uncertaintyResolver;
 
     /**
      * MQ를 이용한 비동기 결제 승인 요청
@@ -81,31 +82,14 @@ public class KakaoPayApproveService {
                 try {
                     kakaoApiResponseOpt = kaKaoPayApiClient.requestPaymentApprove(parameter, kakaoPayData);
                 } catch (Exception e) {
-                    log.warn("카카오페이 승인 호출 중 예외 발생 ({}). 즉시 상태 조회(Polling) 시도 - orderId: {}", e.getMessage(), parameter.getOrderId());
-                    // 예외 발생 시 즉시 1회 상태 조회 시도
-                    kakaoApiResponseOpt = kaKaoPayApiClient.inquirePaymentStatus(kakaoPayData.getTid())
-                            .filter(res -> "SUCCESS_PAYMENT".equals(res.getStatus()));
-                    
-                    if (kakaoApiResponseOpt.isEmpty()) {
-                        log.warn("상태 조회 결과 결제 확인 안됨. 처리 지연/실패 -> UNKNOWN 처리 및 보상 큐 위임 - orderId: {}", parameter.getOrderId());
-                        handleUnknownPayment(parameter.getOrderId(), kakaoPayData.getTid());
-                        throw new BusinessException(Code.INVALID_KAKAO_API_RESPONSE);
-                    }
-                    log.info("예외 발생 후 단건 조회로 결제 성공 확인 (복구 완료) - orderId: {}", parameter.getOrderId());
+                    kakaoApiResponseOpt = uncertaintyResolver.recoverByInquiry(
+                            parameter, kakaoPayData, "APPROVE_EXCEPTION:" + e.getClass().getSimpleName());
                 }
 
                 if (kakaoApiResponseOpt.isEmpty()) {
                     // 회로차단(CircuitBreaker) fallback 등으로 빈 응답이 반환된 경우에 대한 방어 로직
-                    log.warn("카카오페이 승인 응답 없음 (Fallback 등). 즉시 상태 조회(Polling) 시도 - orderId: {}", parameter.getOrderId());
-                    kakaoApiResponseOpt = kaKaoPayApiClient.inquirePaymentStatus(kakaoPayData.getTid())
-                            .filter(res -> "SUCCESS_PAYMENT".equals(res.getStatus()));
-
-                    if (kakaoApiResponseOpt.isEmpty()) {
-                        log.warn("상태 조회 결과도 존재하지 않음. UNKNOWN 처리 - orderId: {}", parameter.getOrderId());
-                        handleUnknownPayment(parameter.getOrderId(), kakaoPayData.getTid());
-                        throw new BusinessException(Code.INVALID_KAKAO_API_RESPONSE);
-                    }
-                    log.info("응답 Empty 후 단건 조회로 결제 성공 확인 (복구 완료) - orderId: {}", parameter.getOrderId());
+                    kakaoApiResponseOpt = uncertaintyResolver.recoverByInquiry(
+                            parameter, kakaoPayData, "APPROVE_EMPTY_RESPONSE");
                 }
 
                 KaKaoPayApproveDTO.KaKaoApiResponse kakaoApiResponse = kakaoApiResponseOpt.get();
@@ -139,29 +123,6 @@ public class KakaoPayApproveService {
             throw new BusinessException(Code.PAYMENT_UNKNOWN_STATUS_RETRY);
         }
         throw new BusinessException(Code.INVALID_KAKAO_API_RESPONSE);
-    }
-
-    /**
-     * 결제 결과를 알 수 없는 경우 (타임아웃 등) 처리
-     * 즉시 UNKNOWN 상태로 전환하고 보상 트랜잭션(스케줄러)으로 위임 (Fail-fast)
-     */
-    private void handleUnknownPayment(String orderId, String tid) {
-        log.warn("결제 알 수 없는 상태(타임아웃 등) 발생 -> 즉시 UNKNOWN 전환 후 스케줄러 위임 - orderId: {}", orderId);
-
-        try {
-            // 1. 즉시 UNKNOWN 상태로 변경 (사용자 대기 시간 최소화)
-            var kakaoPayDataOpt = transactionService.findKakaoPayData(orderId);
-            kakaoPayDataOpt.ifPresent(data -> {
-                transactionService.updateStatus(data.getId(), PaymentStatus.UNKNOWN);
-                log.info("결제 상태 UNKNOWN 변경 완료 - orderId: {}", orderId);
-            });
-
-            // 2. 보상 트랜잭션 예약 (스케줄러에서 사후 처리)
-            paymentRecoveryService.scheduleRecovery(orderId, tid, "TIMEOUT_UNKNOWN");
-
-        } catch (Exception e) {
-            log.error("UNKNOWN 처리 중 오류 발생 - orderId: {}", orderId, e);
-        }
     }
 
     /**

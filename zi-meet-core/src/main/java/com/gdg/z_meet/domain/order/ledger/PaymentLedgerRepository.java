@@ -1,13 +1,19 @@
 package com.gdg.z_meet.domain.order.ledger;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.LockModeType;
+
 public interface PaymentLedgerRepository extends JpaRepository<PaymentLedgerEntry, Long> {
 
     Optional<PaymentLedgerEntry> findTopByOrderIdOrderByLedgerIdDesc(String orderId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<PaymentLedgerEntry> findFirstByOrderIdOrderByLedgerIdDesc(String orderId);
 
     Optional<PaymentLedgerEntry> findByRequestId(String requestId);
 

@@ -1,6 +1,10 @@
 package com.gdg.z_meet.domain.order.repository;
 
 import com.gdg.z_meet.domain.order.entity.KakaoPayData;
+import com.gdg.z_meet.domain.order.entity.KakaoPayData.RecoveryStatus;
+import com.gdg.z_meet.domain.order.entity.enums.PaymentStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.Modifying;
@@ -34,6 +38,18 @@ public interface KakaoPayDataRepository extends JpaRepository<KakaoPayData, Long
         List<KakaoPayData> findByStatusAndCreatedAtBefore(
                         com.gdg.z_meet.domain.order.entity.enums.PaymentStatus status,
                         java.time.LocalDateTime createdAt);
+
+        @Query("""
+               SELECT k
+               FROM KakaoPayData k
+               WHERE k.status = :unknownStatus
+                  OR k.recoveryStatus IN :recoveryStatuses
+               ORDER BY k.updatedAt DESC
+               """)
+        Page<KakaoPayData> findOperationalAttentionTargets(
+                        @Param("unknownStatus") PaymentStatus unknownStatus,
+                        @Param("recoveryStatuses") List<RecoveryStatus> recoveryStatuses,
+                        Pageable pageable);
 
         @Query(value = "SELECT * FROM kakao_pay_data k " +
                         "WHERE k.recovery_status IN ('PENDING', 'PROCESSING') " +
